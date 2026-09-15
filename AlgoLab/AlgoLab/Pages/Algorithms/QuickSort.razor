@@ -1,0 +1,786 @@
+﻿@using System.Diagnostics
+
+<div>
+
+    <h3>Демонстрация Quick Sort</h3>
+
+    <p>
+        Быстрая сортировка использует принцип «разделяй и властвуй».
+        Выбирается опорный элемент (pivot), после чего массив разделяется
+        на части относительно опорного элемента и каждая часть
+        сортируется рекурсивно.
+    </p>
+
+    <div class="alert alert-info">
+        <strong>Лучший случай:</strong> O(n log n)
+        <br />
+        <strong>Средний случай:</strong> O(n log n)
+        <br />
+        <strong>Худший случай:</strong> O(n²)
+        <br />
+        <strong>Память:</strong> в среднем O(log n)
+    </div>
+
+    <!-- ====================================== -->
+    <!-- ВИЗУАЛИЗАЦИЯ                          -->
+    <!-- ====================================== -->
+
+    <h4 class="mt-4">Визуализация алгоритма</h4>
+
+    <div class="mb-3">
+
+        <label class="form-label">
+            Размер массива:
+            <strong>@arraySize</strong>
+        </label>
+
+        <input type="range"
+               class="form-range"
+               min="5"
+               max="50"
+               @bind="arraySize"
+               disabled="@isRunning" />
+
+    </div>
+
+    <div class="mb-3">
+
+        <label class="form-label">
+            Скорость анимации:
+            <strong>@GetSpeedText()</strong>
+        </label>
+
+        <input type="range"
+               class="form-range"
+               min="1"
+               max="5"
+               @bind="animationSpeed"
+               disabled="@isRunning" />
+
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+
+        <button class="btn btn-secondary"
+                @onclick="GenerateArray"
+                disabled="@isRunning">
+            Новые данные
+        </button>
+
+        <button class="btn btn-primary"
+                @onclick="StartAnimatedSort"
+                disabled="@(isRunning || isSorted)">
+            @(isRunning ? "Сортировка..." : "Сортировать")
+        </button>
+
+    </div>
+
+    <div class="d-flex flex-wrap gap-4 mb-3">
+
+        <span>
+            <span style="color:#6366f1">■</span>
+            Элемент массива
+        </span>
+
+        <span>
+            <span style="color:#f59e0b">■</span>
+            Pivot
+        </span>
+
+        <span>
+            <span style="color:#ef4444">■</span>
+            Сравнивается
+        </span>
+
+        <span>
+            <span style="color:#22c55e">■</span>
+            Отсортировано
+        </span>
+
+    </div>
+
+    @if (numbers.Length > 0)
+    {
+        <div style="
+            height:320px;
+            display:flex;
+            align-items:flex-end;
+            gap:4px;
+            padding:20px;
+            border:1px solid #d1d5db;
+            border-radius:8px;
+            overflow:hidden;">
+
+            @for (int i = 0; i < numbers.Length; i++)
+            {
+                int index = i;
+
+                <div title="@numbers[index]"
+                     style="
+                    flex:1;
+                    min-width:3px;
+                    height:@(numbers[index] * 2.5)px;
+                    background-color:@GetBarColor(index);
+                    border-radius:4px 4px 0 0;
+                    transition:
+                    height 0.15s ease,
+                    background-color 0.15s ease;">
+                </div>
+            }
+
+        </div>
+
+        <div class="text-center mt-3">
+
+            @if (isRunning && pivotIndex >= 0)
+            {
+                <span>
+                    Опорный элемент:
+                    <strong>@numbers[pivotIndex]</strong>
+                </span>
+            }
+            else if (isSorted)
+            {
+                <strong class="text-success">
+                    Массив отсортирован
+                </strong>
+            }
+            else
+            {
+                <span class="text-muted">
+                    Нажмите «Сортировать»
+                </span>
+            }
+
+        </div>
+
+        <div class="row mt-4">
+
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <small class="text-muted">
+                            Сравнений
+                        </small>
+                        <h4>@comparisons</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <small class="text-muted">
+                            Обменов
+                        </small>
+                        <h4>@swaps</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <small class="text-muted">
+                            Рекурсивных вызовов
+                        </small>
+                        <h4>@recursiveCalls</h4>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+
+    <!-- ====================================== -->
+    <!-- ЭКСПЕРИМЕНТ                           -->
+    <!-- ====================================== -->
+
+    <hr class="my-5" />
+
+    <h3>Экспериментальный анализ</h3>
+
+    <p>
+        Для каждого размера n генерируется исходный массив.
+        Quick Sort выполняется 5 раз на копиях одинакового массива.
+        На графике показывается среднее машинное время.
+    </p>
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Максимальное n
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="10"
+                   max="2000"
+                   @bind="benchmarkMaxN"
+                   disabled="@benchmarkRunning" />
+
+        </div>
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Шаг
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   max="500"
+                   @bind="benchmarkStep"
+                   disabled="@benchmarkRunning" />
+
+        </div>
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Запусков для каждого n
+            </label>
+
+            <input class="form-control"
+                   value="5"
+                   disabled />
+
+        </div>
+
+    </div>
+
+    <button class="btn btn-success"
+            @onclick="RunBenchmark"
+            disabled="@benchmarkRunning">
+
+        @(benchmarkRunning
+            ? "Эксперимент выполняется..."
+            : "Провести эксперимент")
+
+    </button>
+
+    @if (benchmarkRunning)
+    {
+        <div class="mt-3">
+
+            <div class="spinner-border spinner-border-sm"
+                 role="status">
+            </div>
+
+            <span class="ms-2">
+                Выполняется n = @currentBenchmarkN
+            </span>
+
+        </div>
+    }
+
+    @if (benchmarkResults.Count > 0)
+    {
+        <div class="mt-5">
+
+            <h4>
+                Зависимость времени выполнения от n
+            </h4>
+
+            <ApexChart TItem="BenchmarkPoint"
+                       Height="400">
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="benchmarkResults"
+                                 Name="Эксперимент"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="theoreticalResults"
+                                 Name="Теория O(n log n)"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+            </ApexChart>
+
+            <div class="alert alert-secondary mt-4">
+
+                <strong>Теоретический анализ</strong>
+
+                <p class="mt-2 mb-1">
+                    При удачном выборе pivot массив на каждом
+                    рекурсивном уровне делится примерно пополам.
+                    Глубина рекурсии составляет около log₂(n),
+                    а на каждом уровне обрабатывается O(n) элементов.
+                </p>
+
+                <p class="mb-1">
+                    Поэтому средняя сложность:
+                    <strong>O(n log n)</strong>.
+                </p>
+
+                <p class="mb-0">
+                    При крайне неудачных разбиениях возможен
+                    худший случай <strong>O(n²)</strong>.
+                </p>
+
+            </div>
+
+        </div>
+    }
+
+</div>
+
+@code {
+
+    // ==========================================
+    // ВИЗУАЛИЗАЦИЯ
+    // ==========================================
+
+    private int arraySize = 20;
+    private int animationSpeed = 3;
+
+    private int[] numbers = Array.Empty<int>();
+
+    private bool isRunning;
+    private bool isSorted = true;
+
+    private long comparisons;
+    private long swaps;
+    private long recursiveCalls;
+
+    private int pivotIndex = -1;
+    private int comparingIndex = -1;
+
+    private HashSet<int> sortedIndices = new();
+
+
+    protected override void OnInitialized()
+    {
+        GenerateArray();
+    }
+
+
+    private void GenerateArray()
+    {
+        var random = new Random();
+
+        numbers = Enumerable
+            .Range(0, arraySize)
+            .Select(_ => random.Next(10, 101))
+            .ToArray();
+
+        comparisons = 0;
+        swaps = 0;
+        recursiveCalls = 0;
+
+        pivotIndex = -1;
+        comparingIndex = -1;
+
+        sortedIndices.Clear();
+
+        isRunning = false;
+        isSorted = false;
+    }
+
+
+    private async Task StartAnimatedSort()
+    {
+        if (isRunning)
+            return;
+
+        isRunning = true;
+        isSorted = false;
+
+        comparisons = 0;
+        swaps = 0;
+        recursiveCalls = 0;
+
+        sortedIndices.Clear();
+
+        await QuickSortAnimated(
+            0,
+            numbers.Length - 1);
+
+        for (int i = 0; i < numbers.Length; i++)
+            sortedIndices.Add(i);
+
+        pivotIndex = -1;
+        comparingIndex = -1;
+
+        isRunning = false;
+        isSorted = true;
+
+        StateHasChanged();
+    }
+
+
+    private async Task QuickSortAnimated(
+        int low,
+        int high)
+    {
+        recursiveCalls++;
+
+        if (low >= high)
+        {
+            if (low >= 0 &&
+                low < numbers.Length)
+            {
+                sortedIndices.Add(low);
+            }
+
+            return;
+        }
+
+        int partition =
+            await PartitionAnimated(low, high);
+
+        sortedIndices.Add(partition);
+
+        StateHasChanged();
+
+        await QuickSortAnimated(
+            low,
+            partition - 1);
+
+        await QuickSortAnimated(
+            partition + 1,
+            high);
+    }
+
+
+    private async Task<int> PartitionAnimated(
+        int low,
+        int high)
+    {
+        // Схема Ломуто:
+        // последний элемент является pivot.
+        int pivotValue = numbers[high];
+
+        pivotIndex = high;
+
+        int i = low - 1;
+
+        for (int j = low; j < high; j++)
+        {
+            comparingIndex = j;
+
+            comparisons++;
+
+            StateHasChanged();
+
+            await Task.Delay(GetDelay());
+
+            if (numbers[j] <= pivotValue)
+            {
+                i++;
+
+                if (i != j)
+                {
+                    (numbers[i], numbers[j]) =
+                        (numbers[j], numbers[i]);
+
+                    swaps++;
+
+                    StateHasChanged();
+
+                    await Task.Delay(GetDelay());
+                }
+            }
+        }
+
+        int target = i + 1;
+
+        if (target != high)
+        {
+            (numbers[target], numbers[high]) =
+                (numbers[high], numbers[target]);
+
+            swaps++;
+
+            pivotIndex = target;
+
+            StateHasChanged();
+
+            await Task.Delay(GetDelay());
+        }
+
+        comparingIndex = -1;
+
+        return target;
+    }
+
+
+    private string GetBarColor(int index)
+    {
+        if (index == pivotIndex)
+            return "#f59e0b";
+
+        if (index == comparingIndex)
+            return "#ef4444";
+
+        if (sortedIndices.Contains(index))
+            return "#22c55e";
+
+        return "#6366f1";
+    }
+
+
+    private int GetDelay()
+    {
+        return animationSpeed switch
+        {
+            1 => 600,
+            2 => 350,
+            3 => 180,
+            4 => 80,
+            5 => 20,
+            _ => 180
+        };
+    }
+
+
+    private string GetSpeedText()
+    {
+        return animationSpeed switch
+        {
+            1 => "Очень медленно",
+            2 => "Медленно",
+            3 => "Средне",
+            4 => "Быстро",
+            5 => "Очень быстро",
+            _ => "Средне"
+        };
+    }
+
+
+    // ==========================================
+    // BENCHMARK
+    // ==========================================
+
+    private class BenchmarkPoint
+    {
+        public int N { get; set; }
+
+        public double TimeMs { get; set; }
+    }
+
+
+    private int benchmarkMaxN = 500;
+    private int benchmarkStep = 50;
+
+    private int currentBenchmarkN;
+
+    private bool benchmarkRunning;
+
+    private List<BenchmarkPoint> benchmarkResults = new();
+
+    private List<BenchmarkPoint> theoreticalResults = new();
+
+
+    private async Task RunBenchmark()
+    {
+        if (benchmarkRunning)
+            return;
+
+        if (benchmarkMaxN < 1 ||
+            benchmarkStep < 1)
+        {
+            return;
+        }
+
+        if (benchmarkMaxN > 2000)
+            benchmarkMaxN = 2000;
+
+        benchmarkRunning = true;
+
+        benchmarkResults.Clear();
+        theoreticalResults.Clear();
+
+        StateHasChanged();
+
+        await Task.Yield();
+
+
+        for (int n = benchmarkStep;
+             n <= benchmarkMaxN;
+             n += benchmarkStep)
+        {
+            currentBenchmarkN = n;
+
+            int[] source =
+                GenerateBenchmarkArray(n);
+
+            double totalMilliseconds = 0;
+
+
+            for (int run = 0; run < 5; run++)
+            {
+                int[] data =
+                    (int[])source.Clone();
+
+                var stopwatch =
+                    Stopwatch.StartNew();
+
+                QuickSortBenchmark(
+                    data,
+                    0,
+                    data.Length - 1);
+
+                stopwatch.Stop();
+
+                totalMilliseconds +=
+                    stopwatch.Elapsed.TotalMilliseconds;
+            }
+
+            benchmarkResults.Add(
+                new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs =
+                        totalMilliseconds / 5.0
+                });
+
+            StateHasChanged();
+
+            await Task.Yield();
+        }
+
+        BuildTheoreticalCurve();
+
+        currentBenchmarkN = 0;
+        benchmarkRunning = false;
+
+        StateHasChanged();
+    }
+
+
+    private static int[] GenerateBenchmarkArray(
+        int n)
+    {
+        var random = new Random();
+
+        var result = new int[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            result[i] =
+                random.Next(0, 100_000);
+        }
+
+        return result;
+    }
+
+
+    private static void QuickSortBenchmark(
+        int[] data,
+        int low,
+        int high)
+    {
+        if (low >= high)
+            return;
+
+        int partition =
+            PartitionBenchmark(
+                data,
+                low,
+                high);
+
+        QuickSortBenchmark(
+            data,
+            low,
+            partition - 1);
+
+        QuickSortBenchmark(
+            data,
+            partition + 1,
+            high);
+    }
+
+
+    private static int PartitionBenchmark(
+        int[] data,
+        int low,
+        int high)
+    {
+        int pivot =
+            data[high];
+
+        int i = low - 1;
+
+        for (int j = low;
+             j < high;
+             j++)
+        {
+            if (data[j] <= pivot)
+            {
+                i++;
+
+                (data[i], data[j]) =
+                    (data[j], data[i]);
+            }
+        }
+
+        (data[i + 1], data[high]) =
+            (data[high], data[i + 1]);
+
+        return i + 1;
+    }
+
+
+    private void BuildTheoreticalCurve()
+    {
+        theoreticalResults.Clear();
+
+        if (benchmarkResults.Count == 0)
+            return;
+
+
+        // T(n) ≈ C * n * log2(n)
+        //
+        // Коэффициент C подбирается методом
+        // наименьших квадратов.
+
+        double numerator = 0;
+        double denominator = 0;
+
+
+        foreach (var point in benchmarkResults)
+        {
+            double theoretical =
+                point.N *
+                Math.Log2(Math.Max(2, point.N));
+
+            numerator +=
+                point.TimeMs *
+                theoretical;
+
+            denominator +=
+                theoretical *
+                theoretical;
+        }
+
+
+        double c =
+            denominator == 0
+                ? 0
+                : numerator / denominator;
+
+
+        foreach (var point in benchmarkResults)
+        {
+            double theoretical =
+                point.N *
+                Math.Log2(Math.Max(2, point.N));
+
+            theoreticalResults.Add(
+                new BenchmarkPoint
+                {
+                    N = point.N,
+                    TimeMs =
+                        c * theoretical
+                });
+        }
+    }
+}
