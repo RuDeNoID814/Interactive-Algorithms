@@ -15,19 +15,23 @@ else
     </div>
 
     <div class="algo-interactive">
-        <!--
-            TODO: каждый участник добавляет свою интерактивную компоненту сюда.
-            Пример структуры:
 
-            <AlgoControls />       — параметры (N, шаг, кол-во прогонов)
-            <AlgoChart />          — график сложности
-            <AlgoCode />           — код алгоритма
-        -->
+    @if (Slug == "bubble")
+    {
+        <BubbleSort />
+    }
+    else
+    {
         <div class="algo-placeholder">
-            <p>⚙️ Интерактивная часть для <strong>@algo.Name</strong> ещё не реализована.</p>
-            <p>Если это твой алгоритм — добавь компоненту в <code>Pages/AlgorithmPage.razor</code></p>
+            <p>
+                Интерактивная часть для
+                <strong>@algo.Name</strong>
+                ещё не реализована.
+            </p>
         </div>
-    </div>
+    }
+
+</div>
 }
 
 @code {

@@ -1,0 +1,195 @@
+﻿<div class="bubble-sort">
+
+    <h3>Демонстрация Bubble Sort</h3>
+
+    <p>
+        Сортировка пузырьком последовательно сравнивает соседние
+        элементы массива и меняет их местами, если они расположены
+        в неправильном порядке.
+    </p>
+
+    <div class="alert alert-info">
+        <strong>Временная сложность:</strong> O(n²)
+        <br />
+        <strong>Дополнительная память:</strong> O(1)
+    </div>
+
+    <!-- Размер массива -->
+    <div class="mb-3">
+
+        <label class="form-label">
+            Размер массива: <strong>@arraySize</strong>
+        </label>
+
+        <input type="range"
+               class="form-range"
+               min="5"
+               max="50"
+               @bind="arraySize" />
+
+    </div>
+
+    <!-- Кнопки -->
+    <div class="d-flex gap-2 mb-4">
+
+        <button class="btn btn-secondary"
+                @onclick="GenerateArray">
+            Новые данные
+        </button>
+
+        <button class="btn btn-primary"
+                @onclick="SortArray"
+                disabled="@isSorted">
+            Сортировать
+        </button>
+
+    </div>
+
+    <!-- Визуализация массива -->
+    @if (numbers.Length > 0)
+    {
+        <div style="
+            height: 300px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            overflow: hidden;">
+
+            @foreach (var number in numbers)
+            {
+                <div style="
+                    flex: 1;
+                    min-width: 3px;
+                    height: @(number * 2.5)px;
+                    background-color: #6366f1;
+                    border-radius: 4px 4px 0 0;">
+                </div>
+            }
+
+        </div>
+
+        <!-- Статистика -->
+        <div class="row mt-4">
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+
+                        <small>Сравнений</small>
+                        <h4>@comparisons</h4>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+
+                        <small>Обменов</small>
+                        <h4>@swaps</h4>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+
+                        <small>Размер массива</small>
+                        <h4>@numbers.Length</h4>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+
+</div>
+
+
+@code {
+
+    // Размер массива
+    private int arraySize = 20;
+
+    // Сам массив
+    private int[] numbers = Array.Empty<int>();
+
+    // Количество сравнений
+    private long comparisons = 0;
+
+    // Количество обменов
+    private long swaps = 0;
+
+    // Отсортирован ли массив
+    private bool isSorted = true;
+
+
+    // Выполняется при открытии страницы
+    protected override void OnInitialized()
+    {
+        GenerateArray();
+    }
+
+
+    // Генерация случайного массива
+    private void GenerateArray()
+    {
+        var random = new Random();
+
+        numbers = Enumerable
+            .Range(0, arraySize)
+            .Select(_ => random.Next(10, 101))
+            .ToArray();
+
+        comparisons = 0;
+        swaps = 0;
+
+        isSorted = false;
+    }
+
+
+    // Сортировка пузырьком
+    private void SortArray()
+    {
+        comparisons = 0;
+        swaps = 0;
+
+        for (int i = 0; i < numbers.Length - 1; i++)
+        {
+            bool swapped = false;
+
+            for (int j = 0; j < numbers.Length - i - 1; j++)
+            {
+                comparisons++;
+
+                // Если элементы стоят неправильно —
+                // меняем их местами
+                if (numbers[j] > numbers[j + 1])
+                {
+                    (numbers[j], numbers[j + 1]) =
+                        (numbers[j + 1], numbers[j]);
+
+                    swaps++;
+
+                    swapped = true;
+                }
+            }
+
+            // Если за весь проход не было ни одного обмена,
+            // массив уже отсортирован
+            if (!swapped)
+            {
+                break;
+            }
+        }
+
+        isSorted = true;
+    }
+}
