@@ -1,0 +1,37 @@
+@page "/"
+
+<div class="home-header">
+    <h1>Interactive Algorithms</h1>
+    <p>Выбери алгоритм, чтобы посмотреть его работу</p>
+</div>
+
+<div class="algo-grid">
+    @foreach (var algo in Algorithms)
+    {
+        <a href="@($"algorithm/{algo.Slug}")" class="algo-card">
+            <div class="algo-card-complexity">@algo.Complexity</div>
+            <h5>@algo.Name</h5>
+            <p>@algo.Description</p>
+        </a>
+    }
+</div>
+
+@code {
+    private record AlgoInfo(string Name, string Description, string Complexity, string Slug);
+
+    private static readonly List<AlgoInfo> Algorithms =
+    [
+        new("f(n) = 1",               "Константная функция",          "O(1)",        "const"),
+        new("Сумма элементов",         "Линейный проход по массиву",   "O(n)",        "sum"),
+        new("Произведение элементов",  "Линейный проход по массиву",   "O(n)",        "product"),
+        new("Наивный полином",         "Вычисление полинома в лоб",    "O(n²)",       "poly-naive"),
+        new("Метод Горнера",           "Вычисление полинома",          "O(n)",        "horner"),
+        new("Пузырьковая сортировка",  "Сравнение соседних элементов", "O(n²)",       "bubble"),
+        new("Быстрая сортировка",      "Divide & Conquer",             "O(n log n)",  "quick"),
+        new("Timsort",                 "Гибрид merge + insertion",     "O(n log n)",  "timsort"),
+        new("Возведение в степень",    "Простой перебор",              "O(n)",        "pow-simple"),
+        new("Степень рекурсивно",      "Рекурсивный алгоритм",         "O(n)",        "pow-recursive"),
+        new("Быстрое возведение",      "Бинарное разложение",          "O(log n)",    "pow-fast"),
+        new("Умножение матриц",        "Три вложенных цикла",          "O(n³)",       "matrix"),
+    ];
+}

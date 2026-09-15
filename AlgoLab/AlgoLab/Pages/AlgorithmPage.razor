@@ -1,0 +1,60 @@
+@page "/algorithm/{Slug}"
+
+@if (algo is null)
+{
+    <h3>Алгоритм не найден</h3>
+    <a href="/">← Назад</a>
+}
+else
+{
+    <div class="algo-page-header">
+        <a href="/" class="back-link">← Все алгоритмы</a>
+        <span class="algo-page-complexity">@algo.Complexity</span>
+        <h2>@algo.Name</h2>
+        <p class="algo-page-desc">@algo.Description</p>
+    </div>
+
+    <div class="algo-interactive">
+        <!--
+            TODO: каждый участник добавляет свою интерактивную компоненту сюда.
+            Пример структуры:
+
+            <AlgoControls />       — параметры (N, шаг, кол-во прогонов)
+            <AlgoChart />          — график сложности
+            <AlgoCode />           — код алгоритма
+        -->
+        <div class="algo-placeholder">
+            <p>⚙️ Интерактивная часть для <strong>@algo.Name</strong> ещё не реализована.</p>
+            <p>Если это твой алгоритм — добавь компоненту в <code>Pages/AlgorithmPage.razor</code></p>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+
+    private record AlgoInfo(string Name, string Description, string Complexity, string Slug);
+
+    private static readonly List<AlgoInfo> Algorithms =
+    [
+        new("f(n) = 1",               "Константная функция",          "O(1)",        "const"),
+        new("Сумма элементов",         "Линейный проход по массиву",   "O(n)",        "sum"),
+        new("Произведение элементов",  "Линейный проход по массиву",   "O(n)",        "product"),
+        new("Наивный полином",         "Вычисление полинома в лоб",    "O(n²)",       "poly-naive"),
+        new("Метод Горнера",           "Вычисление полинома",          "O(n)",        "horner"),
+        new("Пузырьковая сортировка",  "Сравнение соседних элементов", "O(n²)",       "bubble"),
+        new("Быстрая сортировка",      "Divide & Conquer",             "O(n log n)",  "quick"),
+        new("Timsort",                 "Гибрид merge + insertion",     "O(n log n)",  "timsort"),
+        new("Возведение в степень",    "Простой перебор",              "O(n)",        "pow-simple"),
+        new("Степень рекурсивно",      "Рекурсивный алгоритм",         "O(n)",        "pow-recursive"),
+        new("Быстрое возведение",      "Бинарное разложение",          "O(log n)",    "pow-fast"),
+        new("Умножение матриц",        "Три вложенных цикла",          "O(n³)",       "matrix"),
+    ];
+
+    private AlgoInfo? algo;
+
+    protected override void OnParametersSet()
+    {
+        algo = Algorithms.FirstOrDefault(a => a.Slug == Slug);
+    }
+}
