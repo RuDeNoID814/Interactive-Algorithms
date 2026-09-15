@@ -1,4 +1,6 @@
-﻿<div class="bubble-sort">
+﻿@using System.Diagnostics
+
+<div class="bubble-sort">
 
     <h3>Демонстрация Bubble Sort</h3>
 
@@ -9,13 +11,22 @@
     </p>
 
     <div class="alert alert-info">
-        <strong>Временная сложность:</strong> O(n²)
+        <strong>Средняя временная сложность:</strong> O(n²)
+        <br />
+        <strong>Худший случай:</strong> O(n²)
+        <br />
+        <strong>Лучший случай:</strong> O(n)
         <br />
         <strong>Дополнительная память:</strong> O(1)
     </div>
 
 
-    <!-- Настройки массива -->
+    <!-- ============================== -->
+    <!-- ДЕМОНСТРАЦИЯ                   -->
+    <!-- ============================== -->
+
+    <h4 class="mt-4">Визуализация алгоритма</h4>
+
     <div class="mb-3">
 
         <label class="form-label">
@@ -33,7 +44,6 @@
     </div>
 
 
-    <!-- Скорость анимации -->
     <div class="mb-3">
 
         <label class="form-label">
@@ -51,7 +61,6 @@
     </div>
 
 
-    <!-- Кнопки -->
     <div class="d-flex gap-2 mb-4">
 
         <button class="btn btn-secondary"
@@ -69,8 +78,8 @@
     </div>
 
 
-    <!-- Обозначения цветов -->
-    <div class="d-flex gap-4 mb-3">
+    <!-- Легенда -->
+    <div class="d-flex flex-wrap gap-4 mb-3">
 
         <span>
             <span style="color:#6366f1">■</span>
@@ -90,16 +99,16 @@
     </div>
 
 
-    <!-- Столбики массива -->
     @if (numbers.Length > 0)
     {
+        <!-- Столбики -->
         <div style="
             height: 320px;
             display: flex;
             align-items: flex-end;
             gap: 4px;
             padding: 20px;
-            border: 1px solid #444;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
             overflow: hidden;">
 
@@ -107,7 +116,8 @@
             {
                 int index = i;
 
-                <div style="
+                <div title="@numbers[index]"
+                     style="
                     flex: 1;
                     min-width: 3px;
                     height: @(numbers[index] * 2.5)px;
@@ -123,12 +133,13 @@
 
 
         <!-- Текущее действие -->
-        <div class="mt-3 text-center">
+        <div class="text-center mt-3">
 
-            @if (currentLeft >= 0 && currentRight >= 0)
+            @if (currentLeft >= 0 &&
+                 currentRight >= 0)
             {
                 <span>
-                    Сравниваем элементы:
+                    Сравниваем:
                     <strong>@numbers[currentLeft]</strong>
                     и
                     <strong>@numbers[currentRight]</strong>
@@ -136,9 +147,9 @@
             }
             else if (isSorted)
             {
-                <span class="text-success">
+                <strong class="text-success">
                     Массив отсортирован
-                </span>
+                </strong>
             }
             else
             {
@@ -153,37 +164,265 @@
         <!-- Статистика -->
         <div class="row mt-4">
 
-            <div class="col-md-4">
-                <div class="card">
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+
                     <div class="card-body">
 
-                        <small>Сравнений</small>
+                        <small class="text-muted">
+                            Сравнений
+                        </small>
+
                         <h4>@comparisons</h4>
 
                     </div>
+
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card">
+
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+
                     <div class="card-body">
 
-                        <small>Обменов</small>
+                        <small class="text-muted">
+                            Обменов
+                        </small>
+
                         <h4>@swaps</h4>
 
                     </div>
+
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card">
+
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+
                     <div class="card-body">
 
-                        <small>Размер массива</small>
+                        <small class="text-muted">
+                            Размер массива
+                        </small>
+
                         <h4>@numbers.Length</h4>
 
                     </div>
+
                 </div>
+            </div>
+
+        </div>
+    }
+
+
+    <!-- ============================== -->
+    <!-- ЭКСПЕРИМЕНТ                    -->
+    <!-- ============================== -->
+
+    <hr class="my-5" />
+
+    <h3>Экспериментальный анализ</h3>
+
+    <p>
+        Для каждого значения n сортировка выполняется
+        5 раз. На графике отображается среднее машинное
+        время выполнения.
+    </p>
+
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Максимальное n
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="10"
+                   max="2000"
+                   @bind="benchmarkMaxN"
+                   disabled="@benchmarkRunning" />
+
+        </div>
+
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Шаг
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   max="500"
+                   @bind="benchmarkStep"
+                   disabled="@benchmarkRunning" />
+
+        </div>
+
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Запусков для каждого n
+            </label>
+
+            <input type="text"
+                   class="form-control"
+                   value="5"
+                   disabled />
+
+        </div>
+
+    </div>
+
+
+    <button class="btn btn-success"
+            @onclick="RunBenchmark"
+            disabled="@benchmarkRunning">
+
+        @(benchmarkRunning
+            ? "Эксперимент выполняется..."
+            : "Провести эксперимент")
+
+    </button>
+
+
+    @if (benchmarkRunning)
+    {
+        <div class="mt-3">
+
+            <div class="spinner-border spinner-border-sm"
+                 role="status">
+            </div>
+
+            <span class="ms-2">
+                Выполняется n = @currentBenchmarkN
+            </span>
+
+        </div>
+    }
+
+
+    @if (benchmarkResults.Count > 0)
+    {
+        <div class="mt-5">
+
+            <h4>
+                Зависимость времени выполнения от n
+            </h4>
+
+            <ApexChart TItem="BenchmarkPoint"
+                       Height="400">
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="benchmarkResults"
+                                 Name="Эксперимент"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="theoreticalResults"
+                                 Name="Теоретическая O(n²)"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+            </ApexChart>
+
+
+            <div class="row mt-4">
+
+                <div class="col-md-4 mb-2">
+                    <div class="card h-100">
+
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Количество точек
+                            </small>
+
+                            <h4>
+                                @benchmarkResults.Count
+                            </h4>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="col-md-4 mb-2">
+                    <div class="card h-100">
+
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Максимальное n
+                            </small>
+
+                            <h4>
+                                @benchmarkResults.Last().N
+                            </h4>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="col-md-4 mb-2">
+                    <div class="card h-100">
+
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Последний замер
+                            </small>
+
+                            <h4>
+                                @benchmarkResults.Last().TimeMs.ToString("F3") ms
+                            </h4>
+
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="alert alert-secondary mt-4">
+
+                <strong>
+                    Теоретический анализ
+                </strong>
+
+                <p class="mb-1 mt-2">
+                    Bubble Sort использует два вложенных цикла.
+                    В худшем случае выполняется:
+                </p>
+
+                <code>
+                    n(n - 1) / 2
+                </code>
+
+                <p class="mb-0 mt-2">
+                    сравнений. Следовательно, временная
+                    сложность алгоритма составляет
+                    <strong>O(n²)</strong>.
+                    Теоретическая линия масштабирована
+                    коэффициентом C для сравнения её формы
+                    с экспериментальными результатами.
+                </p>
+
             </div>
 
         </div>
@@ -193,6 +432,10 @@
 
 
 @code {
+
+    // =====================================================
+    // ДЕМОНСТРАЦИЯ
+    // =====================================================
 
     private int arraySize = 20;
 
@@ -204,13 +447,11 @@
     private long swaps;
 
     private bool isSorted = true;
-    private bool isRunning = false;
+    private bool isRunning;
 
-    // Индексы элементов, которые сейчас сравниваются.
     private int currentLeft = -1;
     private int currentRight = -1;
 
-    // С этого индекса вправо элементы уже стоят на своих местах.
     private int sortedFrom;
 
 
@@ -255,7 +496,9 @@
 
         sortedFrom = numbers.Length;
 
-        for (int i = 0; i < numbers.Length - 1; i++)
+        for (int i = 0;
+             i < numbers.Length - 1;
+             i++)
         {
             bool swapped = false;
 
@@ -272,8 +515,8 @@
 
                 await Task.Delay(GetDelay());
 
-
-                if (numbers[j] > numbers[j + 1])
+                if (numbers[j] >
+                    numbers[j + 1])
                 {
                     (numbers[j], numbers[j + 1]) =
                         (numbers[j + 1], numbers[j]);
@@ -287,17 +530,13 @@
                 }
             }
 
-            // После прохода максимальный элемент
-            // гарантированно оказался справа.
-            sortedFrom = numbers.Length - i - 1;
+            sortedFrom =
+                numbers.Length - i - 1;
 
             StateHasChanged();
 
-
             if (!swapped)
             {
-                // Если обменов не было,
-                // весь оставшийся массив отсортирован.
                 sortedFrom = 0;
                 break;
             }
@@ -317,20 +556,17 @@
 
     private string GetBarColor(int index)
     {
-        // Красный — элементы, которые сейчас сравниваются.
         if (index == currentLeft ||
             index == currentRight)
         {
             return "#ef4444";
         }
 
-        // Зелёный — уже отсортированная правая часть.
         if (index >= sortedFrom)
         {
             return "#22c55e";
         }
 
-        // Фиолетовый — ещё не обработанные элементы.
         return "#6366f1";
     }
 
@@ -360,5 +596,226 @@
             5 => "Очень быстро",
             _ => "Средне"
         };
+    }
+
+
+    // =====================================================
+    // BENCHMARK
+    // =====================================================
+
+    private class BenchmarkPoint
+    {
+        public int N { get; set; }
+
+        public double TimeMs { get; set; }
+    }
+
+
+    private int benchmarkMaxN = 500;
+
+    private int benchmarkStep = 50;
+
+    private int currentBenchmarkN;
+
+    private bool benchmarkRunning;
+
+    private List<BenchmarkPoint> benchmarkResults = new();
+
+    private List<BenchmarkPoint> theoreticalResults = new();
+
+
+    private async Task RunBenchmark()
+    {
+        if (benchmarkRunning)
+            return;
+
+        if (benchmarkMaxN < 1)
+            return;
+
+        if (benchmarkStep < 1)
+            return;
+
+        if (benchmarkMaxN > 2000)
+            benchmarkMaxN = 2000;
+
+
+        benchmarkRunning = true;
+
+        benchmarkResults.Clear();
+        theoreticalResults.Clear();
+
+        StateHasChanged();
+
+        await Task.Yield();
+
+
+        for (int n = benchmarkStep;
+             n <= benchmarkMaxN;
+             n += benchmarkStep)
+        {
+            currentBenchmarkN = n;
+
+            // Один исходный массив для данного n.
+            int[] source =
+                GenerateBenchmarkArray(n);
+
+            double totalMilliseconds = 0;
+
+
+            // Требование лабораторной:
+            // пять запусков для каждого n.
+            for (int run = 0;
+                 run < 5;
+                 run++)
+            {
+                // Каждый запуск получает одинаковые
+                // исходные данные.
+                int[] data =
+                    (int[])source.Clone();
+
+                // Копирование намеренно находится
+                // вне измеряемого участка.
+                var stopwatch =
+                    Stopwatch.StartNew();
+
+                BubbleSortBenchmark(data);
+
+                stopwatch.Stop();
+
+                totalMilliseconds +=
+                    stopwatch.Elapsed.TotalMilliseconds;
+            }
+
+
+            double average =
+                totalMilliseconds / 5.0;
+
+
+            benchmarkResults.Add(
+                new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs = average
+                });
+
+
+            // Периодически отдаём управление UI.
+            StateHasChanged();
+
+            await Task.Yield();
+        }
+
+
+        BuildTheoreticalCurve();
+
+        benchmarkRunning = false;
+
+        currentBenchmarkN = 0;
+
+        StateHasChanged();
+    }
+
+
+    private static int[] GenerateBenchmarkArray(
+        int n)
+    {
+        var random = new Random();
+
+        var result = new int[n];
+
+        for (int i = 0;
+             i < result.Length;
+             i++)
+        {
+            result[i] =
+                random.Next(0, 100_000);
+        }
+
+        return result;
+    }
+
+
+    // Чистая реализация Bubble Sort для benchmark.
+    // Здесь НЕТ анимации, Task.Delay и обновления UI.
+    private static void BubbleSortBenchmark(
+        int[] data)
+    {
+        for (int i = 0;
+             i < data.Length - 1;
+             i++)
+        {
+            bool swapped = false;
+
+            for (int j = 0;
+                 j < data.Length - i - 1;
+                 j++)
+            {
+                if (data[j] >
+                    data[j + 1])
+                {
+                    (data[j], data[j + 1]) =
+                        (data[j + 1], data[j]);
+
+                    swapped = true;
+                }
+            }
+
+            if (!swapped)
+            {
+                break;
+            }
+        }
+    }
+
+
+    private void BuildTheoreticalCurve()
+    {
+        theoreticalResults.Clear();
+
+        if (benchmarkResults.Count == 0)
+            return;
+
+
+        // T(n) ≈ C * n²
+        //
+        // C подбираем по экспериментальным данным,
+        // чтобы сравнивать именно характер роста,
+        // а не наносить n² напрямую на шкалу миллисекунд.
+
+        double numerator = 0;
+        double denominator = 0;
+
+        foreach (var point in benchmarkResults)
+        {
+            double nSquared =
+                (double)point.N * point.N;
+
+            numerator +=
+                point.TimeMs * nSquared;
+
+            denominator +=
+                nSquared * nSquared;
+        }
+
+
+        double c =
+            denominator == 0
+                ? 0
+                : numerator / denominator;
+
+
+        foreach (var point in benchmarkResults)
+        {
+            theoreticalResults.Add(
+                new BenchmarkPoint
+                {
+                    N = point.N,
+
+                    TimeMs =
+                        c *
+                        point.N *
+                        point.N
+                });
+        }
     }
 }
