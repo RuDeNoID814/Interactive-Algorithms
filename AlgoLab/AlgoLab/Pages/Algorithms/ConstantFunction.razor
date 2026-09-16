@@ -1,0 +1,136 @@
+@using System.Diagnostics
+@using System.Linq
+@using ApexCharts
+
+<div>
+    <h3>f(v) = 1 — постоянная функция</h3>
+
+    <p>
+        Функция всегда возвращает 1, не зависимо от размера входного массива.
+        Сложность O(1) — время не растёт с ростом n.
+    </p>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Максимальное n: <strong>@maxN</strong></label>
+            <input type="range" class="form-range" min="100" max="2000" step="100"
+                   @bind="maxN" disabled="@isRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Шаг: <strong>@step</strong></label>
+            <input type="range" class="form-range" min="1" max="100" step="1"
+                   @bind="step" disabled="@isRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Повторов на замер: <strong>@repeats</strong></label>
+            <input type="range" class="form-range" min="100" max="10000" step="100"
+                   @bind="repeats" disabled="@isRunning" />
+        </div>
+    </div>
+
+    <button class="btn btn-primary mb-4" @onclick="Run" disabled="@isRunning">
+        @(isRunning ? $"Считаю... n = {currentN}" : "Запустить эксперимент")
+    </button>
+
+    @if (points.Count > 0)
+    {
+        <ApexChart TItem="Pt" Title="Время выполнения f(v) = 1" Height="400">
+            <ApexPointSeries TItem="Pt"
+                             Items="points"
+                             Name="Эксперимент"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(p => p.N)"
+                             YValue="@(p => (decimal)p.T)" />
+
+            <ApexPointSeries TItem="Pt"
+                             Items="theory"
+                             Name="Теоретическая O(1)"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(p => p.N)"
+                             YValue="@(p => (decimal)p.T)" />
+        </ApexChart>
+
+        <div class="alert alert-secondary mt-4">
+            <strong>Результаты эксперимента:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Точек: @points.Count</li>
+                <li>Максимальное n: @points.Max(p => p.N)</li>
+                <li>Среднее время: @points.Average(p => p.T).ToString("F6") мкс</li>
+                <li>Классификация: O(1) — время не зависит от n</li>
+            </ul>
+        </div>
+    }
+</div>
+
+
+@code {
+    int maxN = 2000;
+    int step = 10;
+    int repeats = 1000;
+    int currentN;
+    bool isRunning;
+
+    List<Pt> points = new();
+    List<Pt> theory = new();
+
+    async Task Run()
+    {
+        isRunning = true;
+        points.Clear();
+        theory.Clear();
+        StateHasChanged();
+        await Task.Yield();
+
+        var rng = new Random(42);
+
+        Algo(new int[] { 1 });
+
+        for (int n = 1; n <= maxN; n += step)
+        {
+            currentN = n;
+            int[] v = Enumerable.Range(0, n).Select(_ => rng.Next(10000)).ToArray();
+
+            double total = 0;
+
+            for (int i = 0; i < 5; i++)
+            {
+                var sw = Stopwatch.StartNew();
+
+                for (int j = 0; j < repeats; j++)
+                {
+                    Algo(v);
+                }
+
+                sw.Stop();
+                total += sw.Elapsed.TotalMicroseconds / repeats;
+            }
+
+            double avg = total / 5;
+            points.Add(new Pt(n, avg));
+
+            if (n % (step * 10) == 0)
+            {
+                StateHasChanged();
+                await Task.Yield();
+            }
+        }
+
+        double average = points.Average(p => p.T);
+        foreach (var p in points)
+        {
+            theory.Add(new Pt(p.N, average));
+        }
+
+        isRunning = false;
+        currentN = 0;
+    }
+
+    int Algo(int[] v)
+    {
+        return 1;
+    }
+
+    record Pt(int N, double T);
+}
