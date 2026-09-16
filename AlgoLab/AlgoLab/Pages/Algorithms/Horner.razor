@@ -1,0 +1,152 @@
+@using System.Diagnostics
+@using System.Linq
+@using ApexCharts
+
+<div>
+    <h3>Метод Горнера</h3>
+
+    <p>
+        Вычисление значения полинома P(x) = v₀ + v₁·x + v₂·x² + ... + vₙ₋₁·xⁿ⁻¹
+        по схеме P(x) = v₀ + x·(v₁ + x·(v₂ + ...)) при x = 1.5.
+        Сложность O(n) — n умножений и n сложений.
+    </p>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Максимальное n: <strong>@maxN</strong></label>
+            <input type="range" class="form-range" min="100" max="2000" step="100"
+                   @bind="maxN" disabled="@isRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Шаг: <strong>@step</strong></label>
+            <input type="range" class="form-range" min="1" max="100" step="1"
+                   @bind="step" disabled="@isRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Повторов на замер: <strong>@repeats</strong></label>
+            <input type="range" class="form-range" min="10" max="1000" step="10"
+                   @bind="repeats" disabled="@isRunning" />
+        </div>
+    </div>
+
+    <button class="btn btn-primary mb-4" @onclick="Run" disabled="@isRunning">
+        @(isRunning ? $"Считаю... n = {currentN}" : "Запустить эксперимент")
+    </button>
+
+    @if (points.Count > 0)
+    {
+        <ApexChart TItem="Pt" Title="Время выполнения — Метод Горнера" Height="400">
+            <ApexPointSeries TItem="Pt"
+                             Items="points"
+                             Name="Эксперимент"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(p => p.N)"
+                             YValue="@(p => (decimal)p.T)" />
+
+            <ApexPointSeries TItem="Pt"
+                             Items="theory"
+                             Name="Теоретическая O(n)"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(p => p.N)"
+                             YValue="@(p => (decimal)p.T)" />
+        </ApexChart>
+
+        <div class="alert alert-secondary mt-4">
+            <strong>Результаты эксперимента:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Точек: @points.Count</li>
+                <li>Максимальное n: @points.Max(p => p.N)</li>
+                <li>Время при max n: @points.Last().T.ToString("F3") мкс</li>
+                <li>Классификация: O(n) — линейный рост</li>
+            </ul>
+        </div>
+    }
+</div>
+
+
+@code {
+    int maxN = 2000;
+    int step = 10;
+    int repeats = 100;
+    int currentN;
+    bool isRunning;
+
+    List<Pt> points = new();
+    List<Pt> theory = new();
+
+    async Task Run()
+    {
+        isRunning = true;
+        points.Clear();
+        theory.Clear();
+        StateHasChanged();
+        await Task.Yield();
+
+        var rng = new Random(42);
+
+        Algo(new int[] { 1 });
+
+        for (int n = 1; n <= maxN; n += step)
+        {
+            currentN = n;
+            int[] v = Enumerable.Range(0, n).Select(_ => rng.Next(10000)).ToArray();
+
+            double total = 0;
+
+            for (int i = 0; i < 5; i++)
+            {
+                var sw = Stopwatch.StartNew();
+
+                for (int j = 0; j < repeats; j++)
+                {
+                    Algo(v);
+                }
+
+                sw.Stop();
+                total += sw.Elapsed.TotalMicroseconds / repeats;
+            }
+
+            double avg = total / 5;
+            points.Add(new Pt(n, avg));
+
+            if (n % (step * 10) == 0)
+            {
+                StateHasChanged();
+                await Task.Yield();
+            }
+        }
+
+        // Теоретическая линия O(n): T ≈ C * n
+        double num = 0, den = 0;
+        foreach (var p in points)
+        {
+            num += p.T * p.N;
+            den += (double)p.N * p.N;
+        }
+        double c = den == 0 ? 0 : num / den;
+
+        foreach (var p in points)
+        {
+            theory.Add(new Pt(p.N, c * p.N));
+        }
+
+        isRunning = false;
+        currentN = 0;
+    }
+
+    double Algo(int[] v)
+    {
+        double x = 1.5;
+        double result = 0;
+        // Идём справа налево: на каждом шаге умножаем на x и добавляем следующий коэффициент
+        for (int i = v.Length - 1; i >= 0; i--)
+        {
+            result = result * x + v[i];
+        }
+        return result;
+    }
+
+    record Pt(int N, double T);
+}

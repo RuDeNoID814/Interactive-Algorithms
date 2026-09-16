@@ -48,6 +48,26 @@ else
         {
             <PowFast />
         }
+        else if (Slug == "pow-classic")
+        {
+            <PowClassical />
+        }
+        else if (Slug == "sum")
+        {
+            <SumElements />
+        }
+        else if (Slug == "product")
+        {
+            <ProductElements />
+        }
+        else if (Slug == "horner")
+        {
+            <Horner />
+        }
+        else if (Slug == "poly-naive")
+        {
+            <PolyNaive />
+        }
         else
     {
         <div class="algo-placeholder">
@@ -80,6 +100,7 @@ else
         new("Возведение в степень",    "Простой перебор",              "O(n)",        "pow-simple"),
         new("Степень рекурсивно",      "Рекурсивный алгоритм",         "O(n)",        "pow-recursive"),
         new("Быстрое возведение",      "Бинарное разложение",          "O(log n)",    "pow-fast"),
+        new("Классическая степень",    "QuickPow1 из задания",         "O(log n)",    "pow-classic"),
         new("Умножение матриц",        "Три вложенных цикла",          "O(n³)",       "matrix"),
     ];
 
