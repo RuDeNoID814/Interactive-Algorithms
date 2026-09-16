@@ -1,0 +1,611 @@
+﻿@using System.Diagnostics
+@using System.Numerics
+
+<div>
+
+    <h3>Классический алгоритм возведения в степень</h3>
+
+    <p>
+        Разновидность быстрого возведения в степень. В отличие от
+        «бинарного по битам», здесь показатель <em>k</em> сам
+        «растворяется» до нуля: если он чётный — основание
+        возводится в квадрат, а k уменьшается вдвое; если нечётный —
+        накопленный результат умножается на текущее основание,
+        а k уменьшается на единицу.
+    </p>
+
+    <div class="alert alert-info">
+        <strong>Лучший случай:</strong> O(log n)
+        <br />
+        <strong>Средний случай:</strong> O(log n)
+        <br />
+        <strong>Худший случай:</strong> O(log n)
+        <br />
+        <strong>Дополнительная память:</strong> O(1)
+    </div>
+
+    <!-- ====================================== -->
+    <!-- ВИЗУАЛИЗАЦИЯ                          -->
+    <!-- ====================================== -->
+
+    <h4 class="mt-4">Визуализация алгоритма</h4>
+
+    <div class="mb-3">
+        <label class="form-label">
+            Основание x: <strong>@baseValue</strong>
+        </label>
+        <input type="range"
+               class="form-range"
+               min="2" max="9"
+               @bind="baseValue"
+               disabled="@isRunning" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">
+            Показатель n: <strong>@exponent</strong>
+        </label>
+        <input type="range"
+               class="form-range"
+               min="1" max="64"
+               @bind="exponent"
+               disabled="@isRunning" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">
+            Скорость анимации: <strong>@GetSpeedText()</strong>
+        </label>
+        <input type="range"
+               class="form-range"
+               min="1" max="5"
+               @bind="animationSpeed"
+               disabled="@isRunning" />
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-secondary"
+                @onclick="Reset"
+                disabled="@isRunning">
+            Сброс
+        </button>
+        <button class="btn btn-primary"
+                @onclick="StartAnimated"
+                disabled="@(isRunning || isFinished)">
+            @(isRunning ? "Выполняется..." : "Вычислить")
+        </button>
+    </div>
+
+    <div class="d-flex flex-wrap gap-4 mb-3">
+        <span><span style="color:#6366f1">■</span> Ожидает</span>
+        <span><span style="color:#ef4444">■</span> Активный шаг</span>
+        <span><span style="color:#f59e0b">■</span> Нечётный k</span>
+        <span><span style="color:#0ea5e9">■</span> Чётный k</span>
+        <span><span style="color:#22c55e">■</span> Завершено</span>
+    </div>
+
+    <!-- Текущее состояние переменных -->
+
+    <div class="row mb-4">
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                    <small class="text-muted">k (показатель)</small>
+                    <h2 style="font-family:monospace">@k</h2>
+                    <small class="text-muted">
+                        binary: @Convert.ToString(k, 2)
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100 border-info">
+                <div class="card-body text-center">
+                    <small class="text-muted">c (основание)</small>
+                    <h2 style="font-family:monospace; word-break:break-all; font-size:1.4rem">
+                        @FormatBig(c)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                    <small class="text-muted">f (результат)</small>
+                    <h2 style="font-family:monospace; word-break:break-all; font-size:1.4rem">
+                        @FormatBig(f)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mb-3">
+        @if (isRunning)
+        {
+            <span>
+                Итерация <strong>@iteration</strong>
+                &nbsp;|&nbsp;
+                Ветка:
+                <strong style="color:@(lastBranch == "even" ? "#0ea5e9" : "#f59e0b")">
+                    @(lastBranch == "even"
+                        ? "k чётное → c = c · c, k = k / 2"
+                        : lastBranch == "odd"
+                            ? "k нечётное → f = f · c, k = k − 1"
+                            : "—")
+                </strong>
+            </span>
+        }
+        else if (isFinished)
+        {
+            <strong class="text-success">
+                Готово. Всего итераций: @iteration, умножений: @multiplications
+            </strong>
+        }
+        else
+        {
+            <span class="text-muted">Нажмите «Вычислить»</span>
+        }
+    </div>
+
+    <!-- Журнал шагов -->
+
+    <div style="
+        max-height:320px;
+        overflow-y:auto;
+        border:1px solid #d1d5db;
+        border-radius:8px;">
+
+        @if (steps.Count == 0)
+        {
+            <div class="p-3 text-muted">
+                Журнал пуст
+            </div>
+        }
+        else
+        {
+            <table class="table table-sm mb-0 align-middle">
+                <thead style="position:sticky; top:0; background:#f8fafc;">
+                    <tr>
+                        <th style="width:60px">#</th>
+                        <th>Ветка</th>
+                        <th>k</th>
+                        <th>c</th>
+                        <th>f</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = steps.Count - 1; i >= 0; i--)
+                    {
+                        var s = steps[i];
+                        bool isCurrent = isRunning
+                                         && i == steps.Count - 1;
+                        <tr style="background-color:@(isCurrent ? "#fef2f2" : "transparent")">
+                            <td>@s.Iteration</td>
+                            <td>
+                                <span style="
+                                    display:inline-block;
+                                    padding:2px 8px;
+                                    border-radius:10px;
+                                    font-size:0.8rem;
+                                    color:white;
+                                    background-color:@GetBranchColor(s.Branch);">
+                                    @(s.Branch == "even" ? "чёт" :
+                                      s.Branch == "odd" ? "нечёт" : "—")
+                                </span>
+                            </td>
+                            <td style="font-family:monospace">@s.K</td>
+                            <td style="font-family:monospace">@FormatBig(s.C)</td>
+                            <td style="font-family:monospace">@FormatBig(s.F)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+    </div>
+
+    <div class="row mt-4">
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Итераций</small>
+                    <h4>@iteration</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Умножений</small>
+                    <h4>@multiplications</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Длина результата</small>
+                    <h4>@resultDigits цифр</h4>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ====================================== -->
+    <!-- ЭКСПЕРИМЕНТ                           -->
+    <!-- ====================================== -->
+
+    <hr class="my-5" />
+
+    <h3>Экспериментальный анализ</h3>
+
+    <p>
+        Для каждого показателя n алгоритм выполняется 5 раз
+        (основание фиксировано, x = 2), измеряется среднее
+        машинное время.
+    </p>
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Максимальное n</label>
+            <input type="number"
+                   class="form-control"
+                   min="10" max="2000"
+                   @bind="benchmarkMaxN"
+                   disabled="@benchmarkRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Шаг</label>
+            <input type="number"
+                   class="form-control"
+                   min="1" max="500"
+                   @bind="benchmarkStep"
+                   disabled="@benchmarkRunning" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Запусков</label>
+            <input class="form-control" value="5" disabled />
+        </div>
+
+    </div>
+
+    <button class="btn btn-success"
+            @onclick="RunBenchmark"
+            disabled="@benchmarkRunning">
+        @(benchmarkRunning
+            ? "Эксперимент выполняется..."
+            : "Провести эксперимент")
+    </button>
+
+    @if (benchmarkRunning)
+    {
+        <div class="mt-3">
+            <div class="spinner-border spinner-border-sm"></div>
+            <span class="ms-2">Выполняется n = @currentBenchmarkN</span>
+        </div>
+    }
+
+    @if (benchmarkResults.Count > 0)
+    {
+        <div class="mt-5">
+
+            <h4>Зависимость времени выполнения от n</h4>
+
+            <ApexChart TItem="BenchmarkPoint" Height="400">
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="benchmarkResults"
+                                 Name="Эксперимент"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+                <ApexPointSeries TItem="BenchmarkPoint"
+                                 Items="theoreticalResults"
+                                 Name="Теория O(log n)"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="@(p => p.N)"
+                                 YValue="@(p => (decimal)p.TimeMs)" />
+
+            </ApexChart>
+
+            <div class="alert alert-secondary mt-4">
+                <strong>Теоретический анализ</strong>
+                <p class="mt-2 mb-1">
+                    Каждая итерация уменьшает <em>k</em> либо вдвое
+                    (чётное), либо на единицу (нечётное). В худшем
+                    случае (все биты равны 1) получается примерно
+                    <em>2 · log₂ n</em> итераций, в лучшем — <em>log₂ n</em>.
+                </p>
+                <p class="mb-0">
+                    На каждой итерации выполняется ровно одно
+                    умножение, поэтому сложность по числу умножений —
+                    <strong>O(log n)</strong>, а по памяти — <strong>O(1)</strong>.
+                </p>
+            </div>
+
+        </div>
+    }
+
+</div>
+
+@code {
+
+    private int baseValue = 2;
+    private int exponent = 16;
+    private int animationSpeed = 3;
+
+    private bool isRunning;
+    private bool isFinished;
+
+    private long multiplications;
+    private int iteration;
+    private int resultDigits;
+
+    private int k;
+    private BigInteger c = 1;
+    private BigInteger f = 1;
+
+    private string lastBranch = "";
+
+    private class StepRecord
+    {
+        public int Iteration { get; set; }
+        public string Branch { get; set; } = "";
+        public int K { get; set; }
+        public BigInteger C { get; set; }
+        public BigInteger F { get; set; }
+    }
+
+    private List<StepRecord> steps = new();
+
+
+    private void Reset()
+    {
+        multiplications = 0;
+        iteration = 0;
+        resultDigits = 0;
+        lastBranch = "";
+
+        k = exponent;
+        c = baseValue;
+        f = 1;
+
+        steps.Clear();
+        isFinished = false;
+    }
+
+
+    private async Task StartAnimated()
+    {
+        if (isRunning)
+            return;
+
+        Reset();
+
+        isRunning = true;
+
+        StateHasChanged();
+        await Task.Delay(GetDelay());
+
+        while (k != 0)
+        {
+            iteration++;
+
+            if (k % 2 == 0)
+            {
+                lastBranch = "even";
+                c *= c;
+                k /= 2;
+                multiplications++;
+            }
+            else
+            {
+                lastBranch = "odd";
+                f *= c;
+                k -= 1;
+                multiplications++;
+            }
+
+            steps.Add(new StepRecord
+            {
+                Iteration = iteration,
+                Branch = lastBranch,
+                K = k,
+                C = c,
+                F = f
+            });
+
+            StateHasChanged();
+            await Task.Delay(GetDelay());
+        }
+
+        resultDigits = f.ToString().Length;
+
+        isRunning = false;
+        isFinished = true;
+        lastBranch = "";
+
+        StateHasChanged();
+    }
+
+
+    private string GetBranchColor(string branch) => branch switch
+    {
+        "even" => "#0ea5e9",
+        "odd" => "#f59e0b",
+        _ => "#6366f1"
+    };
+
+
+    private static string FormatBig(BigInteger value)
+    {
+        var s = value.ToString();
+        if (s.Length <= 30)
+            return s;
+        return s[..15] + "…" + s[^15..];
+    }
+
+
+    private int GetDelay() => animationSpeed switch
+    {
+        1 => 600,
+        2 => 350,
+        3 => 180,
+        4 => 80,
+        5 => 20,
+        _ => 180
+    };
+
+
+    private string GetSpeedText() => animationSpeed switch
+    {
+        1 => "Очень медленно",
+        2 => "Медленно",
+        3 => "Средне",
+        4 => "Быстро",
+        5 => "Очень быстро",
+        _ => "Средне"
+    };
+
+
+    // ==========================================
+    // BENCHMARK
+    // ==========================================
+
+    private class BenchmarkPoint
+    {
+        public int N { get; set; }
+        public double TimeMs { get; set; }
+    }
+
+    private int benchmarkMaxN = 500;
+    private int benchmarkStep = 50;
+    private int currentBenchmarkN;
+    private bool benchmarkRunning;
+
+    private List<BenchmarkPoint> benchmarkResults = new();
+    private List<BenchmarkPoint> theoreticalResults = new();
+
+
+    private async Task RunBenchmark()
+    {
+        if (benchmarkRunning)
+            return;
+
+        if (benchmarkMaxN < 1 || benchmarkStep < 1)
+            return;
+
+        if (benchmarkMaxN > 2000)
+            benchmarkMaxN = 2000;
+
+        benchmarkRunning = true;
+
+        benchmarkResults.Clear();
+        theoreticalResults.Clear();
+
+        StateHasChanged();
+        await Task.Yield();
+
+        const int benchBase = 2;
+
+        for (int n = benchmarkStep; n <= benchmarkMaxN; n += benchmarkStep)
+        {
+            currentBenchmarkN = n;
+
+            double total = 0;
+
+            for (int run = 0; run < 5; run++)
+            {
+                var sw = Stopwatch.StartNew();
+                QuickPow1(benchBase, n);
+                sw.Stop();
+                total += sw.Elapsed.TotalMilliseconds;
+            }
+
+            benchmarkResults.Add(new BenchmarkPoint
+            {
+                N = n,
+                TimeMs = total / 5.0
+            });
+
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        BuildTheoreticalCurve();
+
+        currentBenchmarkN = 0;
+        benchmarkRunning = false;
+
+        StateHasChanged();
+    }
+
+
+    // Точный перенос псевдокода из методички
+    private static BigInteger QuickPow1(int x, int n)
+    {
+        BigInteger c = x;
+        BigInteger f = 1;
+        int k = n;
+
+        while (k != 0)
+        {
+            if (k % 2 == 0)
+            {
+                c *= c;
+                k /= 2;
+            }
+            else
+            {
+                f *= c;
+                k -= 1;
+            }
+        }
+
+        return f;
+    }
+
+
+    private void BuildTheoreticalCurve()
+    {
+        theoreticalResults.Clear();
+
+        if (benchmarkResults.Count == 0)
+            return;
+
+        double num = 0, den = 0;
+
+        foreach (var p in benchmarkResults)
+        {
+            double t = Math.Log2(Math.Max(2, p.N));
+            num += p.TimeMs * t;
+            den += t * t;
+        }
+
+        double coeff = den == 0 ? 0 : num / den;
+
+        foreach (var p in benchmarkResults)
+        {
+            double t = Math.Log2(Math.Max(2, p.N));
+            theoreticalResults.Add(new BenchmarkPoint
+            {
+                N = p.N,
+                TimeMs = coeff * t
+            });
+        }
+    }
+
+}
