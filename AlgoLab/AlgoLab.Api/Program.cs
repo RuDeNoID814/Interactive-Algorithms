@@ -44,6 +44,18 @@ var app = builder.Build();
 
 
 // =============================================
+// DATABASE MIGRATION
+// =============================================
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider
+        .GetRequiredService<AlgoLabDbContext>();
+    db.Database.Migrate();
+}
+
+
+// =============================================
 // HTTP PIPELINE
 // =============================================
 

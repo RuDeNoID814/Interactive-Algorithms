@@ -16,3 +16,8 @@ packages/
 [Rr]elease/
 release/
 out/
+
+## Local SQLite DB (создаётся миграциями при запуске AlgoLab.Api)
+*.db
+*.db-shm
+*.db-wal
