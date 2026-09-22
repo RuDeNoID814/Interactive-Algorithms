@@ -2,225 +2,49 @@
 
 <div>
 
-    <h3>Демонстрация TimSort</h3>
+    <h3>TimSort</h3>
 
     <p>
-        TimSort — гибридный алгоритм сортировки. Он объединяет
-        сортировку вставками для небольших участков массива и
-        сортировку слиянием для объединения отсортированных участков.
+        TimSort — гибридный алгоритм сортировки. В данной
+        учебной реализации массив разбивается на небольшие серии,
+        серии сортируются методом вставок, а затем объединяются
+        операцией слияния.
     </p>
 
     <div class="alert alert-info">
-        <strong>Лучший случай:</strong> O(n)
-        <br />
-        <strong>Средний случай:</strong> O(n log n)
-        <br />
-        <strong>Худший случай:</strong> O(n log n)
-        <br />
+        <strong>Лучший случай:</strong> O(n)<br />
+        <strong>Средний случай:</strong> O(n log n)<br />
+        <strong>Худший случай:</strong> O(n log n)<br />
         <strong>Дополнительная память:</strong> O(n)
     </div>
 
-    <!-- ====================================== -->
-    <!-- ВИЗУАЛИЗАЦИЯ                          -->
-    <!-- ====================================== -->
-
-    <h4 class="mt-4">Визуализация алгоритма</h4>
-
-    <div class="mb-3">
-
-        <label class="form-label">
-            Размер массива:
-            <strong>@arraySize</strong>
-        </label>
-
-        <input type="range"
-               class="form-range"
-               min="5"
-               max="50"
-               @bind="arraySize"
-               disabled="@isRunning" />
-
-    </div>
-
-    <div class="mb-3">
-
-        <label class="form-label">
-            Скорость анимации:
-            <strong>@GetSpeedText()</strong>
-        </label>
-
-        <input type="range"
-               class="form-range"
-               min="1"
-               max="5"
-               @bind="animationSpeed"
-               disabled="@isRunning" />
-
-    </div>
-
-    <div class="d-flex gap-2 mb-4">
-
-        <button class="btn btn-secondary"
-                @onclick="GenerateArray"
-                disabled="@isRunning">
-            Новые данные
-        </button>
-
-        <button class="btn btn-primary"
-                @onclick="StartAnimatedSort"
-                disabled="@(isRunning || isSorted)">
-            @(isRunning ? "Сортировка..." : "Сортировать")
-        </button>
-
-    </div>
-
-    <div class="d-flex flex-wrap gap-4 mb-3">
-
-        <span>
-            <span style="color:#6366f1">■</span>
-            Не обработан
-        </span>
-
-        <span>
-            <span style="color:#ef4444">■</span>
-            Текущие элементы
-        </span>
-
-        <span>
-            <span style="color:#f59e0b">■</span>
-            Текущий run
-        </span>
-
-        <span>
-            <span style="color:#22c55e">■</span>
-            Готово
-        </span>
-
-    </div>
-
-    @if (numbers.Length > 0)
-    {
-        <div style="
-            height:320px;
-            display:flex;
-            align-items:flex-end;
-            gap:4px;
-            padding:20px;
-            border:1px solid #d1d5db;
-            border-radius:8px;
-            overflow:hidden;">
-
-            @for (int i = 0; i < numbers.Length; i++)
-            {
-                int index = i;
-
-                <div title="@numbers[index]"
-                     style="
-                    flex:1;
-                    min-width:3px;
-                    height:@(numbers[index] * 2.5)px;
-                    background-color:@GetBarColor(index);
-                    border-radius:4px 4px 0 0;
-                    transition:
-                    height 0.15s ease,
-                    background-color 0.15s ease;">
-                </div>
-            }
-
-        </div>
-
-        <div class="text-center mt-3">
-
-            @if (isRunning)
-            {
-                <span>
-                    Этап:
-                    <strong>@currentStage</strong>
-                </span>
-            }
-            else if (isSorted)
-            {
-                <strong class="text-success">
-                    Массив отсортирован
-                </strong>
-            }
-            else
-            {
-                <span class="text-muted">
-                    Нажмите «Сортировать»
-                </span>
-            }
-
-        </div>
-
-        <div class="row mt-4">
-
-            <div class="col-md-4 mb-2">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <small class="text-muted">
-                            Сравнений
-                        </small>
-                        <h4>@comparisons</h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4 mb-2">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <small class="text-muted">
-                            Перемещений
-                        </small>
-                        <h4>@moves</h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4 mb-2">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <small class="text-muted">
-                            Размер run
-                        </small>
-                        <h4>@DemoRun</h4>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    }
-
-    <!-- ====================================== -->
-    <!-- ЭКСПЕРИМЕНТ                           -->
-    <!-- ====================================== -->
-
-    <hr class="my-5" />
+    <hr class="my-4" />
 
     <h3>Экспериментальный анализ</h3>
 
     <p>
-        Для каждого размера n алгоритм выполняется 5 раз
-        на копиях одного исходного массива. Измеряется
-        среднее машинное время.
+        Для каждого n алгоритм выполняется пять раз на копиях
+        одного исходного случайного массива.
     </p>
 
     <div class="row">
 
         <div class="col-md-4 mb-3">
+
             <label class="form-label">
                 Максимальное n
             </label>
 
             <input type="number"
                    class="form-control"
-                   min="10"
-                   max="2000"
-                   @bind="benchmarkMaxN"
-                   disabled="@benchmarkRunning" />
+                   min="1"
+                   @bind="maxN"
+                   disabled="@isRunning" />
+
         </div>
 
         <div class="col-md-4 mb-3">
+
             <label class="form-label">
                 Шаг
             </label>
@@ -228,48 +52,99 @@
             <input type="number"
                    class="form-control"
                    min="1"
-                   max="500"
-                   @bind="benchmarkStep"
-                   disabled="@benchmarkRunning" />
+                   @bind="step"
+                   disabled="@isRunning" />
+
         </div>
 
         <div class="col-md-4 mb-3">
+
             <label class="form-label">
-                Запусков
+                Количество запусков
             </label>
 
             <input class="form-control"
-                   value="5"
+                   value="@Runs"
                    disabled />
+
         </div>
 
     </div>
 
-    <button class="btn btn-success"
-            @onclick="RunBenchmark"
-            disabled="@benchmarkRunning">
 
-        @(benchmarkRunning
-            ? "Эксперимент выполняется..."
-            : "Провести эксперимент")
-
-    </button>
-
-    @if (benchmarkRunning)
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div class="mt-3">
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
 
-            <div class="spinner-border spinner-border-sm">
-            </div>
 
-            <span class="ms-2">
-                Выполняется n = @currentBenchmarkN
-            </span>
+    @if (maxN >= 1_000_000)
+    {
+        <div class="alert alert-warning">
+
+            <strong>Предупреждение.</strong>
+
+            При очень больших массивах эксперимент
+            может потребовать значительный объём памяти.
 
         </div>
     }
 
-    @if (benchmarkResults.Count > 0)
+
+    <button class="btn btn-success"
+            @onclick="RunExperiment"
+            disabled="@isRunning">
+
+        @(isRunning
+            ? "Эксперимент выполняется..."
+            : "Запустить эксперимент")
+
+    </button>
+
+
+    @if (isRunning)
+    {
+        <div class="mt-4">
+
+            <div class="d-flex justify-content-between">
+
+                <span>
+                    n = <strong>@currentN</strong>,
+                    запуск <strong>@currentRun</strong> из @Runs
+                </span>
+
+                <strong>
+                    @(progress.ToString("F1"))%
+                </strong>
+
+            </div>
+
+            <div class="progress mt-2"
+                 style="height:25px;">
+
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     style="@GetProgressStyle()">
+
+                    @(progress.ToString("F0"))%
+
+                </div>
+
+            </div>
+
+            <div class="text-muted mt-2">
+                Обработано размеров:
+                <strong>@completedPoints</strong>
+                из
+                <strong>@totalPoints</strong>
+            </div>
+
+        </div>
+    }
+
+
+    @if (points.Count > 0)
     {
         <div class="mt-5">
 
@@ -278,43 +153,198 @@
             </h4>
 
             <ApexChart TItem="BenchmarkPoint"
-                       Height="400">
+                       Height="430">
 
                 <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="benchmarkResults"
+                                 Items="points"
                                  Name="Эксперимент"
                                  SeriesType="SeriesType.Line"
                                  XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
+                                 YValue="@(p => (decimal)p.TimeMs)"
+                                 Color="#2563eb" />
 
                 <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="theoreticalResults"
-                                 Name="Теория O(n log n)"
-                                 SeriesType="SeriesType.Line"
+                                 Items="approximation.Points"
+                                 Name="Аппроксимация C·n·log₂(n)"
+                                 SeriesType="SeriesType.Scatter"
                                  XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
+                                 YValue="@(p => (decimal)p.TimeMs)"
+                                 Color="#ef4444" />
 
             </ApexChart>
 
-            <div class="alert alert-secondary mt-4">
 
-                <strong>Теоретический анализ</strong>
+            <div class="row mt-4">
 
-                <p class="mt-2 mb-1">
-                    Сначала небольшие участки массива
-                    сортируются методом вставок.
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Коэффициент C
+                            </small>
+
+                            <h5>
+                                @(approximation.Coefficient.ToString("G6"))
+                            </h5>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                R²
+                            </small>
+
+                            <h5>
+                                @(approximation.R2.ToString("F4"))
+                            </h5>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Размер run
+                            </small>
+
+                            <h5>@RunSize</h5>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+
+                            <small class="text-muted">
+                                Последнее время
+                            </small>
+
+                            <h5>
+                                @(points.Last().TimeMs.ToString("F3")) ms
+                            </h5>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="alert alert-light border">
+
+                <h5>Аппроксимация</h5>
+
+                <p>
+                    Экспериментальные результаты аппроксимируются:
                 </p>
 
-                <p class="mb-1">
-                    Затем длина объединяемых участков
-                    последовательно увеличивается в два раза.
+                <div style="font-size:1.2rem;font-family:monospace;">
+
+                    T(n) ≈
+                    @(approximation.Coefficient.ToString("G6"))
+                    · n · log₂(n)
+
+                </div>
+
+                <div class="mt-3">
+
+                    <strong>
+                        Коэффициент детерминации:
+                    </strong>
+
+                    R² =
+                    @(approximation.R2.ToString("F4"))
+
+                </div>
+
+            </div>
+
+
+            <div class="alert alert-secondary">
+
+                <strong>
+                    Теоретический анализ
+                </strong>
+
+                <p class="mt-2 mb-1">
+                    Небольшие серии сортируются методом вставок.
+                    После этого серии многократно объединяются.
                 </p>
 
                 <p class="mb-0">
-                    В данной реализации основная асимптотическая
-                    сложность составляет
+                    Основная асимптотическая сложность данной
+                    реализации:
                     <strong>O(n log n)</strong>.
                 </p>
+
+            </div>
+
+
+            <div class="mt-4">
+
+                <h5>
+                    Последние результаты
+                </h5>
+
+                <div class="table-responsive">
+
+                    <table class="table table-sm table-striped">
+
+                        <thead>
+
+                            <tr>
+                                <th>n</th>
+                                <th>Среднее время, ms</th>
+                                <th>Аппроксимация, ms</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var point in points.TakeLast(
+                                Math.Min(10, points.Count)))
+                            {
+                                var approximate =
+                                    approximation.Points
+                                        .FirstOrDefault(
+                                            p => p.N == point.N);
+
+                                <tr>
+
+                                    <td>
+                                        @point.N
+                                    </td>
+
+                                    <td>
+                                        @(point.TimeMs.ToString("F6"))
+                                    </td>
+
+                                    <td>
+                                        @(approximate is null
+                                            ? "-"
+                                            : approximate.TimeMs.ToString("F6"))
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
 
             </div>
 
@@ -323,475 +353,275 @@
 
 </div>
 
+
 @code {
 
-    // Небольшой run специально выбран для наглядной анимации.
-    private const int DemoRun = 4;
+    private const int Runs = 5;
 
-    // Для benchmark используем больший размер серии.
-    private const int BenchmarkRun = 32;
+    private const int RunSize = 32;
 
-    // ==========================================
-    // ВИЗУАЛИЗАЦИЯ
-    // ==========================================
 
-    private int arraySize = 20;
-    private int animationSpeed = 3;
+    private int maxN = 2000;
 
-    private int[] numbers = Array.Empty<int>();
+    private int step = 50;
+
+
+    private int currentN;
+
+    private int currentRun;
+
+
+    private int totalPoints;
+
+    private int completedPoints;
+
+
+    private double progress;
+
 
     private bool isRunning;
-    private bool isSorted = true;
-
-    private long comparisons;
-    private long moves;
-
-    private int activeIndex1 = -1;
-    private int activeIndex2 = -1;
-
-    private int activeRunStart = -1;
-    private int activeRunEnd = -1;
-
-    private bool allFinished;
-
-    private string currentStage = "";
 
 
-    protected override void OnInitialized()
-    {
-        GenerateArray();
-    }
+    private string errorMessage = "";
 
 
-    private void GenerateArray()
-    {
-        var random = new Random();
-
-        numbers = Enumerable
-            .Range(0, arraySize)
-            .Select(_ => random.Next(10, 101))
-            .ToArray();
-
-        comparisons = 0;
-        moves = 0;
-
-        activeIndex1 = -1;
-        activeIndex2 = -1;
-
-        activeRunStart = -1;
-        activeRunEnd = -1;
-
-        currentStage = "";
-
-        allFinished = false;
-        isRunning = false;
-        isSorted = false;
-    }
+    private List<BenchmarkPoint> points =
+        new();
 
 
-    private async Task StartAnimatedSort()
+    private ApproximationResult approximation =
+        new();
+
+
+    private async Task RunExperiment()
     {
         if (isRunning)
             return;
 
+
+        errorMessage = "";
+
+
+        if (maxN < 1)
+        {
+            errorMessage =
+                "Максимальное n должно быть больше нуля.";
+
+            return;
+        }
+
+
+        if (step < 1)
+        {
+            errorMessage =
+                "Шаг должен быть больше нуля.";
+
+            return;
+        }
+
+
         isRunning = true;
-        isSorted = false;
-        allFinished = false;
 
-        comparisons = 0;
-        moves = 0;
 
-        // Сначала сортируем маленькие runs вставками.
-        for (int start = 0;
-             start < numbers.Length;
-             start += DemoRun)
-        {
-            int end = Math.Min(
-                start + DemoRun - 1,
-                numbers.Length - 1);
+        points.Clear();
 
-            activeRunStart = start;
-            activeRunEnd = end;
 
-            currentStage =
-                $"Insertion Sort: [{start}..{end}]";
+        approximation =
+            new ApproximationResult();
 
-            await InsertionSortAnimated(
-                start,
-                end);
-        }
 
+        completedPoints = 0;
 
-        // Затем объединяем runs.
-        for (int size = DemoRun;
-             size < numbers.Length;
-             size *= 2)
-        {
-            for (int left = 0;
-                 left < numbers.Length;
-                 left += 2 * size)
-            {
-                int middle =
-                    Math.Min(
-                        left + size - 1,
-                        numbers.Length - 1);
+        progress = 0;
 
-                int right =
-                    Math.Min(
-                        left + 2 * size - 1,
-                        numbers.Length - 1);
 
-                if (middle >= right)
-                    continue;
+        totalPoints =
+            ((maxN - 1) / step)
+            + 1;
 
-                activeRunStart = left;
-                activeRunEnd = right;
-
-                currentStage =
-                    $"Merge: [{left}..{middle}] + [{middle + 1}..{right}]";
-
-                await MergeAnimated(
-                    left,
-                    middle,
-                    right);
-            }
-        }
-
-        activeIndex1 = -1;
-        activeIndex2 = -1;
-
-        activeRunStart = -1;
-        activeRunEnd = -1;
-
-        allFinished = true;
-
-        currentStage = "Готово";
-
-        isRunning = false;
-        isSorted = true;
-
-        StateHasChanged();
-    }
-
-
-    private async Task InsertionSortAnimated(
-        int left,
-        int right)
-    {
-        for (int i = left + 1;
-             i <= right;
-             i++)
-        {
-            int key = numbers[i];
-            int j = i - 1;
-
-            activeIndex1 = i;
-
-            while (j >= left)
-            {
-                activeIndex2 = j;
-
-                comparisons++;
-
-                StateHasChanged();
-
-                await Task.Delay(GetDelay());
-
-                if (numbers[j] <= key)
-                    break;
-
-                numbers[j + 1] =
-                    numbers[j];
-
-                moves++;
-
-                j--;
-
-                StateHasChanged();
-
-                await Task.Delay(GetDelay());
-            }
-
-            numbers[j + 1] = key;
-
-            moves++;
-
-            StateHasChanged();
-
-            await Task.Delay(GetDelay());
-        }
-
-        activeIndex1 = -1;
-        activeIndex2 = -1;
-    }
-
-
-    private async Task MergeAnimated(
-        int left,
-        int middle,
-        int right)
-    {
-        int[] leftArray =
-            numbers[left..(middle + 1)];
-
-        int[] rightArray =
-            numbers[(middle + 1)..(right + 1)];
-
-        int i = 0;
-        int j = 0;
-        int k = left;
-
-        while (i < leftArray.Length &&
-               j < rightArray.Length)
-        {
-            activeIndex1 =
-                left + Math.Min(i, leftArray.Length - 1);
-
-            activeIndex2 =
-                middle + 1 +
-                Math.Min(j, rightArray.Length - 1);
-
-            comparisons++;
-
-            StateHasChanged();
-
-            await Task.Delay(GetDelay());
-
-            if (leftArray[i] <= rightArray[j])
-            {
-                numbers[k] = leftArray[i];
-                i++;
-            }
-            else
-            {
-                numbers[k] = rightArray[j];
-                j++;
-            }
-
-            moves++;
-            k++;
-
-            StateHasChanged();
-
-            await Task.Delay(GetDelay());
-        }
-
-        while (i < leftArray.Length)
-        {
-            numbers[k++] = leftArray[i++];
-            moves++;
-
-            StateHasChanged();
-            await Task.Delay(GetDelay());
-        }
-
-        while (j < rightArray.Length)
-        {
-            numbers[k++] = rightArray[j++];
-            moves++;
-
-            StateHasChanged();
-            await Task.Delay(GetDelay());
-        }
-
-        activeIndex1 = -1;
-        activeIndex2 = -1;
-    }
-
-
-    private string GetBarColor(int index)
-    {
-        if (allFinished)
-            return "#22c55e";
-
-        if (index == activeIndex1 ||
-            index == activeIndex2)
-        {
-            return "#ef4444";
-        }
-
-        if (index >= activeRunStart &&
-            index <= activeRunEnd)
-        {
-            return "#f59e0b";
-        }
-
-        return "#6366f1";
-    }
-
-
-    private int GetDelay()
-    {
-        return animationSpeed switch
-        {
-            1 => 600,
-            2 => 350,
-            3 => 180,
-            4 => 80,
-            5 => 20,
-            _ => 180
-        };
-    }
-
-
-    private string GetSpeedText()
-    {
-        return animationSpeed switch
-        {
-            1 => "Очень медленно",
-            2 => "Медленно",
-            3 => "Средне",
-            4 => "Быстро",
-            5 => "Очень быстро",
-            _ => "Средне"
-        };
-    }
-
-
-    // ==========================================
-    // BENCHMARK
-    // ==========================================
-
-    private class BenchmarkPoint
-    {
-        public int N { get; set; }
-
-        public double TimeMs { get; set; }
-    }
-
-
-    private int benchmarkMaxN = 500;
-    private int benchmarkStep = 50;
-
-    private int currentBenchmarkN;
-
-    private bool benchmarkRunning;
-
-    private List<BenchmarkPoint> benchmarkResults = new();
-
-    private List<BenchmarkPoint> theoreticalResults = new();
-
-
-    private async Task RunBenchmark()
-    {
-        if (benchmarkRunning)
-            return;
-
-        if (benchmarkMaxN < 1 ||
-            benchmarkStep < 1)
-        {
-            return;
-        }
-
-        if (benchmarkMaxN > 2000)
-            benchmarkMaxN = 2000;
-
-        benchmarkRunning = true;
-
-        benchmarkResults.Clear();
-        theoreticalResults.Clear();
 
         StateHasChanged();
 
         await Task.Yield();
 
 
-        for (int n = benchmarkStep;
-             n <= benchmarkMaxN;
-             n += benchmarkStep)
+        var random =
+            new Random();
+
+
+        for (int n = 1;
+             n <= maxN;
+             n += step)
         {
-            currentBenchmarkN = n;
+            currentN =
+                n;
 
-            int[] source =
-                GenerateBenchmarkArray(n);
 
-            double totalMilliseconds = 0;
+            int[] original =
+                new int[n];
 
-            for (int run = 0;
-                 run < 5;
-                 run++)
+
+            for (int i = 0;
+                 i < original.Length;
+                 i++)
             {
-                int[] data =
-                    (int[])source.Clone();
-
-                var stopwatch =
-                    Stopwatch.StartNew();
-
-                TimSortBenchmark(data);
-
-                stopwatch.Stop();
-
-                totalMilliseconds +=
-                    stopwatch.Elapsed.TotalMilliseconds;
+                original[i] =
+                    random.Next(
+                        0,
+                        100_000);
             }
 
-            benchmarkResults.Add(
+
+            double totalTime =
+                0;
+
+
+            for (int run = 1;
+                 run <= Runs;
+                 run++)
+            {
+                currentRun =
+                    run;
+
+
+                int[] data =
+                    (int[])original.Clone();
+
+
+                var sw =
+                    Stopwatch.StartNew();
+
+
+                Sort(data);
+
+
+                sw.Stop();
+
+
+                totalTime +=
+                    sw.Elapsed.TotalMilliseconds;
+
+
+                UpdateProgress(
+                    completedPoints,
+                    run);
+
+
+                StateHasChanged();
+
+                await Task.Yield();
+            }
+
+
+            points.Add(
                 new BenchmarkPoint
                 {
                     N = n,
 
                     TimeMs =
-                        totalMilliseconds / 5.0
+                        totalTime
+                        / Runs
                 });
+
+
+            completedPoints++;
+
+
+            progress =
+                completedPoints
+                * 100.0
+                / totalPoints;
+
 
             StateHasChanged();
 
             await Task.Yield();
         }
 
-        BuildTheoreticalCurve();
 
-        currentBenchmarkN = 0;
-        benchmarkRunning = false;
+        approximation =
+            ApproximationService.Fit(
+                points,
+                ComplexityType.Linearithmic);
+
+
+        progress = 100;
+
+        currentN = 0;
+
+        currentRun = 0;
+
+        isRunning = false;
+
 
         StateHasChanged();
     }
 
 
-    private static int[] GenerateBenchmarkArray(
-        int n)
+    private void UpdateProgress(
+        int finishedPoints,
+        int run)
     {
-        var random = new Random();
+        double completed =
+            finishedPoints
+            +
+            (double)run
+            / Runs;
 
-        var result = new int[n];
 
-        for (int i = 0;
-             i < result.Length;
-             i++)
-        {
-            result[i] =
-                random.Next(0, 100_000);
-        }
-
-        return result;
+        progress =
+            Math.Min(
+                100,
+                completed
+                * 100
+                / totalPoints);
     }
 
 
-    // Учебная реализация TimSort.
-    // Array.Sort здесь намеренно НЕ используется.
-    private static void TimSortBenchmark(
+    private string GetProgressStyle()
+    {
+        string value =
+            progress.ToString(
+                "F1",
+                System.Globalization
+                    .CultureInfo
+                    .InvariantCulture);
+
+
+        return $"width: {value}%;";
+    }
+
+
+    private static void Sort(
         int[] data)
     {
-        int n = data.Length;
+        int n =
+            data.Length;
 
-        // Сортируем runs вставками.
+
+        // Сначала сортируем небольшие серии
+        // методом вставок.
+
         for (int start = 0;
              start < n;
-             start += BenchmarkRun)
+             start += RunSize)
         {
             int end =
                 Math.Min(
-                    start + BenchmarkRun - 1,
+                    start + RunSize - 1,
                     n - 1);
 
-            InsertionSortBenchmark(
+
+            InsertionSort(
                 data,
                 start,
                 end);
         }
 
-        // Объединяем runs.
-        for (int size = BenchmarkRun;
+
+        // Затем объединяем серии.
+
+        for (int size = RunSize;
              size < n;
              size *= 2)
         {
@@ -804,14 +634,16 @@
                         left + size - 1,
                         n - 1);
 
+
                 int right =
                     Math.Min(
                         left + 2 * size - 1,
                         n - 1);
 
+
                 if (middle < right)
                 {
-                    MergeBenchmark(
+                    Merge(
                         data,
                         left,
                         middle,
@@ -822,7 +654,7 @@
     }
 
 
-    private static void InsertionSortBenchmark(
+    private static void InsertionSort(
         int[] data,
         int left,
         int right)
@@ -831,115 +663,82 @@
              i <= right;
              i++)
         {
-            int key = data[i];
-            int j = i - 1;
+            int value =
+                data[i];
+
+
+            int j =
+                i - 1;
+
 
             while (j >= left &&
-                   data[j] > key)
+                   data[j] > value)
             {
                 data[j + 1] =
                     data[j];
 
+
                 j--;
             }
 
-            data[j + 1] = key;
+
+            data[j + 1] =
+                value;
         }
     }
 
 
-    private static void MergeBenchmark(
+    private static void Merge(
         int[] data,
         int left,
         int middle,
         int right)
     {
-        int[] leftArray =
+        int[] first =
             data[left..(middle + 1)];
 
-        int[] rightArray =
+
+        int[] second =
             data[(middle + 1)..(right + 1)];
 
+
         int i = 0;
+
         int j = 0;
+
         int k = left;
 
-        while (i < leftArray.Length &&
-               j < rightArray.Length)
+
+        while (i < first.Length &&
+               j < second.Length)
         {
-            if (leftArray[i] <=
-                rightArray[j])
+            if (first[i] <=
+                second[j])
             {
                 data[k++] =
-                    leftArray[i++];
+                    first[i++];
             }
             else
             {
                 data[k++] =
-                    rightArray[j++];
+                    second[j++];
             }
         }
 
-        while (i < leftArray.Length)
+
+        while (i <
+               first.Length)
         {
             data[k++] =
-                leftArray[i++];
+                first[i++];
         }
 
-        while (j < rightArray.Length)
+
+        while (j <
+               second.Length)
         {
             data[k++] =
-                rightArray[j++];
-        }
-    }
-
-
-    private void BuildTheoreticalCurve()
-    {
-        theoreticalResults.Clear();
-
-        if (benchmarkResults.Count == 0)
-            return;
-
-        double numerator = 0;
-        double denominator = 0;
-
-        foreach (var point in benchmarkResults)
-        {
-            double theoretical =
-                point.N *
-                Math.Log2(
-                    Math.Max(2, point.N));
-
-            numerator +=
-                point.TimeMs *
-                theoretical;
-
-            denominator +=
-                theoretical *
-                theoretical;
-        }
-
-        double c =
-            denominator == 0
-                ? 0
-                : numerator / denominator;
-
-        foreach (var point in benchmarkResults)
-        {
-            double theoretical =
-                point.N *
-                Math.Log2(
-                    Math.Max(2, point.N));
-
-            theoreticalResults.Add(
-                new BenchmarkPoint
-                {
-                    N = point.N,
-
-                    TimeMs =
-                        c * theoretical
-                });
+                second[j++];
         }
     }
 }

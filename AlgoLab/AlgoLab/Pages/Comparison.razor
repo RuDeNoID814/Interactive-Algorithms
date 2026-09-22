@@ -1,0 +1,1260 @@
+﻿@page "/comparison"
+
+@using System.Diagnostics
+
+<PageTitle>Сравнение алгоритмов</PageTitle>
+
+<div>
+
+    <h2>Сравнение алгоритмов</h2>
+
+    <p class="text-muted">
+        Экспериментальное сравнение времени выполнения
+        нескольких алгоритмов на одинаковых входных данных.
+    </p>
+
+
+    <div class="alert alert-info">
+
+        Выберите алгоритмы, задайте максимальное значение n
+        и шаг. Для каждой точки каждый алгоритм выполняется
+        пять раз.
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- ВЫБОР АЛГОРИТМОВ                         -->
+    <!-- ========================================= -->
+
+    <h4 class="mt-4">
+        Алгоритмы
+    </h4>
+
+
+    <div class="row mb-4">
+
+        <div class="col-md-4 mb-2">
+
+            <div class="form-check">
+
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="bubble"
+                       @bind="useBubble"
+                       disabled="@isRunning" />
+
+                <label class="form-check-label"
+                       for="bubble">
+
+                    Bubble Sort — O(n²)
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4 mb-2">
+
+            <div class="form-check">
+
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="quick"
+                       @bind="useQuick"
+                       disabled="@isRunning" />
+
+                <label class="form-check-label"
+                       for="quick">
+
+                    Quick Sort — O(n log n)
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4 mb-2">
+
+            <div class="form-check">
+
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="tim"
+                       @bind="useTim"
+                       disabled="@isRunning" />
+
+                <label class="form-check-label"
+                       for="tim">
+
+                    TimSort — O(n log n)
+
+                </label>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- ПАРАМЕТРЫ                                -->
+    <!-- ========================================= -->
+
+    <h4>
+        Параметры эксперимента
+    </h4>
+
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Максимальное n
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   @bind="maxN"
+                   disabled="@isRunning" />
+
+        </div>
+
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Шаг
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="1"
+                   @bind="step"
+                   disabled="@isRunning" />
+
+        </div>
+
+
+        <div class="col-md-4 mb-3">
+
+            <label class="form-label">
+                Запусков
+            </label>
+
+            <input class="form-control"
+                   value="@Runs"
+                   disabled />
+
+        </div>
+
+    </div>
+
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+
+    @if (useBubble && maxN >= 10000)
+    {
+        <div class="alert alert-warning">
+
+            <strong>Предупреждение.</strong>
+
+            Выбран Bubble Sort с большим n.
+            Из-за сложности O(n²) сравнение
+            может выполняться долго.
+
+        </div>
+    }
+
+
+    <!-- ========================================= -->
+    <!-- ЗАПУСК                                   -->
+    <!-- ========================================= -->
+
+    <button class="btn btn-success"
+            @onclick="RunComparison"
+            disabled="@isRunning">
+
+        @(isRunning
+            ? "Сравнение выполняется..."
+            : "Сравнить алгоритмы")
+
+    </button>
+
+
+    <!-- ========================================= -->
+    <!-- ПРОГРЕСС                                 -->
+    <!-- ========================================= -->
+    @if (isRunning)
+    {
+        <div class="mt-4">
+
+            <div class="d-flex justify-content-between">
+
+                <span>
+
+                    @currentAlgorithm,
+
+                    n = @currentN,
+
+                    запуск @currentRun из @Runs
+
+                </span>
+
+
+                <strong>
+                    @(progress.ToString("F1"))%
+                </strong>
+
+            </div>
+
+
+            <div class="progress mt-2"
+                 style="height:25px;">
+
+                <div class="
+                    progress-bar
+                    progress-bar-striped
+                    progress-bar-animated"
+                     style="@GetProgressStyle()">
+
+                    @(progress.ToString("F0"))%
+
+                </div>
+
+            </div>
+
+        </div>
+    }
+
+
+    <!-- ========================================= -->
+    <!-- ГРАФИК                                   -->
+    <!-- ========================================= -->
+    @if (HasResults)
+    {
+        <div class="mt-5">
+
+            <h3>
+                Результаты сравнения
+            </h3>
+
+
+            <ApexChart TItem="ComparisonPoint"
+                       Height="500">
+
+
+                @if (bubblePoints.Count > 0)
+                {
+                    <ApexPointSeries TItem="ComparisonPoint"
+                                     Items="bubblePoints"
+                                     Name="Bubble Sort — O(n²)"
+                                     SeriesType="SeriesType.Line"
+                                     XValue="@(p => p.N)"
+                                     YValue="@(p => (decimal)p.TimeMs)"
+                                     Color="#ef4444" />
+                }
+
+
+                @if (quickPoints.Count > 0)
+                {
+                    <ApexPointSeries TItem="ComparisonPoint"
+                                     Items="quickPoints"
+                                     Name="Quick Sort — O(n log n)"
+                                     SeriesType="SeriesType.Line"
+                                     XValue="@(p => p.N)"
+                                     YValue="@(p => (decimal)p.TimeMs)"
+                                     Color="#2563eb" />
+                }
+
+
+                @if (timPoints.Count > 0)
+                {
+                    <ApexPointSeries TItem="ComparisonPoint"
+                                     Items="timPoints"
+                                     Name="TimSort — O(n log n)"
+                                     SeriesType="SeriesType.Line"
+                                     XValue="@(p => p.N)"
+                                     YValue="@(p => (decimal)p.TimeMs)"
+                                     Color="#22c55e" />
+                }
+
+
+            </ApexChart>
+
+
+            <!-- ================================= -->
+            <!-- ИТОГИ                            -->
+            <!-- ================================= -->
+
+            <div class="row mt-4">
+
+
+                @if (bubblePoints.Count > 0)
+                {
+                    <div class="col-md-4 mb-3">
+
+                        <div class="card h-100">
+
+                            <div class="card-body">
+
+                                <h5>
+                                    Bubble Sort
+                                </h5>
+
+                                <p class="mb-1">
+                                    Сложность:
+                                    <strong>O(n²)</strong>
+                                </p>
+
+                                <p class="mb-0">
+
+                                    Последний замер:
+
+                                    <strong>
+                                        @(bubblePoints.Last().TimeMs.ToString("F4")) ms
+                                    </strong>
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+
+                @if (quickPoints.Count > 0)
+                {
+                    <div class="col-md-4 mb-3">
+
+                        <div class="card h-100">
+
+                            <div class="card-body">
+
+                                <h5>
+                                    Quick Sort
+                                </h5>
+
+                                <p class="mb-1">
+
+                                    Средняя сложность:
+
+                                    <strong>
+                                        O(n log n)
+                                    </strong>
+
+                                </p>
+
+                                <p class="mb-0">
+
+                                    Последний замер:
+
+                                    <strong>
+                                        @(quickPoints.Last().TimeMs.ToString("F4")) ms
+                                    </strong>
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+
+                @if (timPoints.Count > 0)
+                {
+                    <div class="col-md-4 mb-3">
+
+                        <div class="card h-100">
+
+                            <div class="card-body">
+
+                                <h5>
+                                    TimSort
+                                </h5>
+
+                                <p class="mb-1">
+
+                                    Сложность:
+
+                                    <strong>
+                                        O(n log n)
+                                    </strong>
+
+                                </p>
+
+                                <p class="mb-0">
+
+                                    Последний замер:
+
+                                    <strong>
+                                        @(timPoints.Last().TimeMs.ToString("F4")) ms
+                                    </strong>
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- ТАБЛИЦА                          -->
+            <!-- ================================= -->
+
+            <div class="mt-4">
+
+                <h4>
+                    Результаты измерений
+                </h4>
+
+
+                <div class="table-responsive">
+
+                    <table class="
+                        table
+                        table-striped
+                        table-sm">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    n
+                                </th>
+
+                                @if (bubblePoints.Count > 0)
+                                {
+                                    <th>
+                                        Bubble, ms
+                                    </th>
+                                }
+
+                                @if (quickPoints.Count > 0)
+                                {
+                                    <th>
+                                        Quick, ms
+                                    </th>
+                                }
+
+                                @if (timPoints.Count > 0)
+                                {
+                                    <th>
+                                        TimSort, ms
+                                    </th>
+                                }
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            @foreach (var n in ResultSizes)
+                            {
+                                <tr>
+
+                                    <td>
+                                        @n
+                                    </td>
+
+
+                                    @if (bubblePoints.Count > 0)
+                                    {
+                                        <td>
+                                            @FormatTime(
+                                                bubblePoints,
+                                                n)
+                                        </td>
+                                    }
+
+
+                                    @if (quickPoints.Count > 0)
+                                    {
+                                        <td>
+                                            @FormatTime(
+                                                quickPoints,
+                                                n)
+                                        </td>
+                                    }
+
+
+                                    @if (timPoints.Count > 0)
+                                    {
+                                        <td>
+                                            @FormatTime(
+                                                timPoints,
+                                                n)
+                                        </td>
+                                    }
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <div class="alert alert-secondary mt-4">
+
+                <strong>
+                    Интерпретация
+                </strong>
+
+                <p class="mt-2 mb-1">
+
+                    При небольших входных данных разница
+                    между алгоритмами может быть малозаметна
+                    из-за накладных расходов и погрешности
+                    измерения.
+
+                </p>
+
+                <p class="mb-0">
+
+                    При увеличении n квадратичная зависимость
+                    Bubble Sort начинает расти значительно
+                    быстрее, чем зависимости O(n log n)
+                    у Quick Sort и TimSort.
+
+                </p>
+
+            </div>
+
+        </div>
+    }
+
+</div>
+
+
+@code {
+
+    // =====================================================
+    // МОДЕЛЬ
+    // =====================================================
+
+    private sealed class ComparisonPoint
+    {
+        public int N { get; set; }
+
+        public double TimeMs { get; set; }
+    }
+
+
+    // =====================================================
+    // НАСТРОЙКИ
+    // =====================================================
+
+    private const int Runs = 5;
+
+    private const int TimRunSize = 32;
+
+
+    private bool useBubble = true;
+
+    private bool useQuick = true;
+
+    private bool useTim = true;
+
+
+    private int maxN = 2000;
+
+    private int step = 50;
+
+
+    // =====================================================
+    // СОСТОЯНИЕ
+    // =====================================================
+
+    private bool isRunning;
+
+    private string errorMessage = "";
+
+
+    private string currentAlgorithm = "";
+
+    private int currentN;
+
+    private int currentRun;
+
+
+    private double progress;
+
+
+    // =====================================================
+    // РЕЗУЛЬТАТЫ
+    // =====================================================
+
+    private List<ComparisonPoint> bubblePoints =
+        new();
+
+    private List<ComparisonPoint> quickPoints =
+        new();
+
+    private List<ComparisonPoint> timPoints =
+        new();
+
+
+    private bool HasResults =>
+        bubblePoints.Count > 0 ||
+        quickPoints.Count > 0 ||
+        timPoints.Count > 0;
+
+
+    private IEnumerable<int> ResultSizes =>
+        bubblePoints
+            .Concat(quickPoints)
+            .Concat(timPoints)
+            .Select(p => p.N)
+            .Distinct()
+            .OrderBy(n => n);
+
+
+    // =====================================================
+    // ЗАПУСК
+    // =====================================================
+
+    private async Task RunComparison()
+    {
+        if (isRunning)
+            return;
+
+
+        errorMessage = "";
+
+
+        if (!useBubble &&
+            !useQuick &&
+            !useTim)
+        {
+            errorMessage =
+                "Выберите хотя бы один алгоритм.";
+
+            return;
+        }
+
+
+        if (maxN < 1)
+        {
+            errorMessage =
+                "Максимальное n должно быть больше нуля.";
+
+            return;
+        }
+
+
+        if (step < 1)
+        {
+            errorMessage =
+                "Шаг должен быть больше нуля.";
+
+            return;
+        }
+
+
+        isRunning =
+            true;
+
+
+        progress =
+            0;
+
+
+        bubblePoints.Clear();
+
+        quickPoints.Clear();
+
+        timPoints.Clear();
+
+
+        StateHasChanged();
+
+        await Task.Yield();
+
+
+        // Список размеров n.
+
+        var sizes =
+            new List<int>();
+
+
+        for (int n = 1;
+             n <= maxN;
+             n += step)
+        {
+            sizes.Add(n);
+        }
+
+
+        // Количество выбранных алгоритмов.
+
+        int selectedAlgorithms =
+            (useBubble ? 1 : 0)
+            +
+            (useQuick ? 1 : 0)
+            +
+            (useTim ? 1 : 0);
+
+
+        // Полный объём работы.
+
+        int totalOperations =
+            selectedAlgorithms
+            *
+            sizes.Count
+            *
+            Runs;
+
+
+        int completedOperations =
+            0;
+
+
+        var random =
+            new Random();
+
+
+        // Для каждого размера создаём
+        // ОДИН исходный массив.
+        //
+        // Все алгоритмы получают копии
+        // одних и тех же данных.
+
+        foreach (int n in sizes)
+        {
+            currentN =
+                n;
+
+
+            int[] original =
+                new int[n];
+
+
+            for (int i = 0;
+                 i < original.Length;
+                 i++)
+            {
+                original[i] =
+                    random.Next(
+                        0,
+                        100_000);
+            }
+
+
+            if (useBubble)
+            {
+                double average =
+                    await MeasureAlgorithm(
+                        "Bubble Sort",
+                        original,
+                        BubbleSort,
+                        totalOperations,
+                        completedOperations);
+
+
+                completedOperations +=
+                    Runs;
+
+
+                bubblePoints.Add(
+                    new ComparisonPoint
+                    {
+                        N = n,
+                        TimeMs = average
+                    });
+            }
+
+
+            if (useQuick)
+            {
+                double average =
+                    await MeasureAlgorithm(
+                        "Quick Sort",
+                        original,
+                        QuickSort,
+                        totalOperations,
+                        completedOperations);
+
+
+                completedOperations +=
+                    Runs;
+
+
+                quickPoints.Add(
+                    new ComparisonPoint
+                    {
+                        N = n,
+                        TimeMs = average
+                    });
+            }
+
+
+            if (useTim)
+            {
+                double average =
+                    await MeasureAlgorithm(
+                        "TimSort",
+                        original,
+                        TimSort,
+                        totalOperations,
+                        completedOperations);
+
+
+                completedOperations +=
+                    Runs;
+
+
+                timPoints.Add(
+                    new ComparisonPoint
+                    {
+                        N = n,
+                        TimeMs = average
+                    });
+            }
+
+
+            StateHasChanged();
+
+            await Task.Yield();
+        }
+
+
+        progress =
+            100;
+
+
+        currentAlgorithm =
+            "";
+
+
+        currentN =
+            0;
+
+
+        currentRun =
+            0;
+
+
+        isRunning =
+            false;
+
+
+        StateHasChanged();
+    }
+
+
+    // =====================================================
+    // ИЗМЕРЕНИЕ ОДНОГО АЛГОРИТМА
+    // =====================================================
+
+    private async Task<double> MeasureAlgorithm(
+        string name,
+        int[] original,
+        Action<int[]> algorithm,
+        int totalOperations,
+        int alreadyCompleted)
+    {
+        currentAlgorithm =
+            name;
+
+
+        double totalTime =
+            0;
+
+
+        for (int run = 1;
+             run <= Runs;
+             run++)
+        {
+            currentRun =
+                run;
+
+
+            // Копирование не входит
+            // в измеряемое время.
+
+            int[] data =
+                (int[])original.Clone();
+
+
+            var sw =
+                Stopwatch.StartNew();
+
+
+            algorithm(data);
+
+
+            sw.Stop();
+
+
+            totalTime +=
+                sw.Elapsed.TotalMilliseconds;
+
+
+            int completed =
+                alreadyCompleted
+                +
+                run;
+
+
+            progress =
+                totalOperations == 0
+                    ? 100
+                    : completed
+                      * 100.0
+                      / totalOperations;
+
+
+            StateHasChanged();
+
+            await Task.Yield();
+        }
+
+
+        return totalTime / Runs;
+    }
+
+
+    // =====================================================
+    // BUBBLE SORT
+    // =====================================================
+
+    private static void BubbleSort(
+        int[] data)
+    {
+        for (int i = 0;
+             i < data.Length - 1;
+             i++)
+        {
+            bool swapped =
+                false;
+
+
+            for (int j = 0;
+                 j < data.Length - i - 1;
+                 j++)
+            {
+                if (data[j] >
+                    data[j + 1])
+                {
+                    (data[j],
+                     data[j + 1])
+                        =
+                    (data[j + 1],
+                     data[j]);
+
+
+                    swapped =
+                        true;
+                }
+            }
+
+
+            if (!swapped)
+                break;
+        }
+    }
+
+
+    // =====================================================
+    // QUICK SORT
+    // =====================================================
+
+    private static void QuickSort(
+        int[] data)
+    {
+        QuickSortRecursive(
+            data,
+            0,
+            data.Length - 1);
+    }
+
+
+    private static void QuickSortRecursive(
+        int[] data,
+        int low,
+        int high)
+    {
+        if (low >= high)
+            return;
+
+
+        int pivot =
+            Partition(
+                data,
+                low,
+                high);
+
+
+        QuickSortRecursive(
+            data,
+            low,
+            pivot - 1);
+
+
+        QuickSortRecursive(
+            data,
+            pivot + 1,
+            high);
+    }
+
+
+    private static int Partition(
+        int[] data,
+        int low,
+        int high)
+    {
+        int pivotValue =
+            data[high];
+
+
+        int i =
+            low - 1;
+
+
+        for (int j = low;
+             j < high;
+             j++)
+        {
+            if (data[j] <=
+                pivotValue)
+            {
+                i++;
+
+
+                (data[i],
+                 data[j])
+                    =
+                (data[j],
+                 data[i]);
+            }
+        }
+
+
+        (data[i + 1],
+         data[high])
+            =
+        (data[high],
+         data[i + 1]);
+
+
+        return i + 1;
+    }
+
+
+    // =====================================================
+    // TIMSORT
+    // =====================================================
+
+    private static void TimSort(
+        int[] data)
+    {
+        int n =
+            data.Length;
+
+
+        for (int start = 0;
+             start < n;
+             start += TimRunSize)
+        {
+            int end =
+                Math.Min(
+                    start
+                    + TimRunSize
+                    - 1,
+                    n - 1);
+
+
+            InsertionSort(
+                data,
+                start,
+                end);
+        }
+
+
+        for (int size = TimRunSize;
+             size < n;
+             size *= 2)
+        {
+            for (int left = 0;
+                 left < n;
+                 left += 2 * size)
+            {
+                int middle =
+                    Math.Min(
+                        left
+                        + size
+                        - 1,
+                        n - 1);
+
+
+                int right =
+                    Math.Min(
+                        left
+                        + 2 * size
+                        - 1,
+                        n - 1);
+
+
+                if (middle < right)
+                {
+                    Merge(
+                        data,
+                        left,
+                        middle,
+                        right);
+                }
+            }
+        }
+    }
+
+
+    private static void InsertionSort(
+        int[] data,
+        int left,
+        int right)
+    {
+        for (int i = left + 1;
+             i <= right;
+             i++)
+        {
+            int value =
+                data[i];
+
+
+            int j =
+                i - 1;
+
+
+            while (j >= left &&
+                   data[j] > value)
+            {
+                data[j + 1] =
+                    data[j];
+
+
+                j--;
+            }
+
+
+            data[j + 1] =
+                value;
+        }
+    }
+
+
+    private static void Merge(
+        int[] data,
+        int left,
+        int middle,
+        int right)
+    {
+        int[] first =
+            data[left..(middle + 1)];
+
+
+        int[] second =
+            data[(middle + 1)..(right + 1)];
+
+
+        int i = 0;
+
+        int j = 0;
+
+        int k = left;
+
+
+        while (i < first.Length &&
+               j < second.Length)
+        {
+            if (first[i] <=
+                second[j])
+            {
+                data[k++] =
+                    first[i++];
+            }
+            else
+            {
+                data[k++] =
+                    second[j++];
+            }
+        }
+
+
+        while (i < first.Length)
+        {
+            data[k++] =
+                first[i++];
+        }
+
+
+        while (j < second.Length)
+        {
+            data[k++] =
+                second[j++];
+        }
+    }
+
+
+    // =====================================================
+    // UI
+    // =====================================================
+
+    private string GetProgressStyle()
+    {
+        string value =
+            progress.ToString(
+                "F1",
+                System.Globalization
+                    .CultureInfo
+                    .InvariantCulture);
+
+
+        return $"width: {value}%;";
+    }
+
+
+    private static string FormatTime(
+        IEnumerable<ComparisonPoint> points,
+        int n)
+    {
+        var point =
+            points.FirstOrDefault(
+                p => p.N == n);
+
+
+        return point is null
+            ? "-"
+            : point.TimeMs.ToString("F6");
+    }
+}

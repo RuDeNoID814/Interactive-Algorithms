@@ -1,24 +1,172 @@
 <div class="top-row ps-3 navbar navbar-dark">
+
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Interactive Algorithms</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
+
+        <a class="navbar-brand"
+           href="">
+            AlgoLab
+        </a>
+
+
+        <button title="Navigation menu"
+                class="navbar-toggler"
+                @onclick="ToggleNavMenu">
+
+            <span class="navbar-toggler-icon">
+            </span>
+
         </button>
+
     </div>
+
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
+
+<div class="@NavMenuCssClass nav-scrollable"
+     @onclick="ToggleNavMenu">
+
+    <nav class="flex-column">
+
+
+        <!-- ГЛАВНАЯ -->
+
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Главная
+
+            <NavLink class="nav-link"
+                     href=""
+                     Match="NavLinkMatch.All">
+
+                <span class="bi bi-house-door-fill-nav-menu"
+                      aria-hidden="true">
+                </span>
+
+                Главная
+
             </NavLink>
+
         </div>
+
+
+        <!-- ЛАБОРАТОРНАЯ №1 -->
+
+        <div class="px-3 mt-3 mb-1">
+
+            <small style="
+                color:#9ca3af;
+                text-transform:uppercase;
+                font-weight:600;">
+
+                Лабораторная №1
+
+            </small>
+
+        </div>
+
+
+        <div class="nav-item px-3">
+
+            <NavLink class="nav-link"
+                     href="">
+
+                Алгоритмы
+
+            </NavLink>
+
+        </div>
+
+
+        <div class="nav-item px-3">
+
+            <NavLink class="nav-link"
+                     href="comparison">
+
+                Сравнение
+
+            </NavLink>
+
+        </div>
+
+
+        <!-- ИСТОРИЯ -->
+        <!-- Страницу добавим следующим этапом. -->
+
+        <div class="nav-item px-3">
+
+            <NavLink class="nav-link disabled"
+                     href="history">
+
+                История
+
+            </NavLink>
+
+        </div>
+
+
+        <!-- БУДУЩИЕ ЛАБОРАТОРНЫЕ -->
+
+        <div class="px-3 mt-4 mb-1">
+
+            <small style="
+                color:#9ca3af;
+                text-transform:uppercase;
+                font-weight:600;">
+
+                Другие лабораторные
+
+            </small>
+
+        </div>
+
+
+        <div class="nav-item px-3">
+
+            <span class="nav-link"
+                  style="
+                opacity:.5;
+                cursor:default;">
+
+                Лабораторная №2
+                — скоро
+
+            </span>
+
+        </div>
+
+
+        <div class="nav-item px-3">
+
+            <span class="nav-link"
+                  style="
+                opacity:.5;
+                cursor:default;">
+
+                Лабораторная №3
+                — скоро
+
+            </span>
+
+        </div>
+
     </nav>
+
 </div>
+
 
 @code {
-    private bool collapseNavMenu = true;
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-    private void ToggleNavMenu() => collapseNavMenu = !collapseNavMenu;
+
+    private bool collapseNavMenu =
+        true;
+
+
+    private string? NavMenuCssClass =>
+        collapseNavMenu
+            ? "collapse"
+            : null;
+
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu =
+            !collapseNavMenu;
+    }
 }
