@@ -1,161 +1,198 @@
 @using System.Diagnostics
-@using System.Linq
-@using ApexCharts
 @inject ExperimentSaveService SaveService
 
-<div>
-    <h3>f(v) = 1 — постоянная функция</h3>
+<h3>f(v) = 1 — постоянная функция</h3>
 
-    <p>
-        Функция всегда возвращает 1, не зависимо от размера входного массива.
-        Сложность O(1) — время не растёт с ростом n.
-    </p>
+<p>
+    Функция всегда возвращает 1, независимо от размера входного массива.
+    Время выполнения не зависит от n.
+</p>
 
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Максимальное n: <strong>@maxN</strong></label>
-            <input type="range" class="form-range" min="100" max="2000" step="100"
-                   @bind="maxN" disabled="@isRunning" />
-        </div>
+<div class="alert alert-info">
+    <strong>Сложность:</strong> O(1)<br />
+    <strong>Память:</strong> O(1)
+</div>
 
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Шаг: <strong>@step</strong></label>
-            <input type="range" class="form-range" min="1" max="100" step="1"
-                   @bind="step" disabled="@isRunning" />
-        </div>
+<hr />
 
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Повторов на замер: <strong>@repeats</strong></label>
-            <input type="range" class="form-range" min="100" max="10000" step="100"
-                   @bind="repeats" disabled="@isRunning" />
-        </div>
+<h3>Экспериментальный анализ</h3>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control"
+               @bind="maxN" disabled="@running" />
     </div>
 
-    <button class="btn btn-primary mb-4" @onclick="Run" disabled="@isRunning">
-        @(isRunning ? $"Считаю... n = {currentN}" : "Запустить эксперимент")
-    </button>
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control"
+               @bind="step" disabled="@running" />
+    </div>
 
-    @if (!string.IsNullOrEmpty(saved))
-    {
-        <div class="alert alert-success mt-2">
-            @saved
-            <a href="/history" class="alert-link ms-2">История</a>
-        </div>
-    }
-
-    @if (points.Count > 0)
-    {
-        <ApexChart TItem="Pt" Title="Время выполнения f(v) = 1" Height="400">
-            <ApexPointSeries TItem="Pt"
-                             Items="points"
-                             Name="Эксперимент"
-                             SeriesType="SeriesType.Line"
-                             XValue="@(p => p.N)"
-                             YValue="@(p => (decimal)p.T)" />
-
-            <ApexPointSeries TItem="Pt"
-                             Items="theory"
-                             Name="Теоретическая O(1)"
-                             SeriesType="SeriesType.Line"
-                             XValue="@(p => p.N)"
-                             YValue="@(p => (decimal)p.T)" />
-        </ApexChart>
-
-        <div class="alert alert-secondary mt-4">
-            <strong>Результаты эксперимента:</strong>
-            <ul class="mb-0 mt-2">
-                <li>Точек: @points.Count</li>
-                <li>Максимальное n: @points.Max(p => p.N)</li>
-                <li>Среднее время: @points.Average(p => p.T).ToString("F6") мкс</li>
-                <li>Классификация: O(1) — время не зависит от n</li>
-            </ul>
-        </div>
-    }
+    <div class="col-md-4 mb-3">
+        <label>Запусков</label>
+        <input class="form-control" value="@Runs" disabled />
+    </div>
 </div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-success"
+        @onclick="Run"
+        disabled="@running">
+    @(running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (running)
+{
+    <div class="mt-4">
+        <div class="d-flex justify-content-between">
+            <span>n = @currentN, запуск @currentRun из @Runs</span>
+            <strong>@progress.ToString("F1")%</strong>
+        </div>
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="@ProgressStyle">
+                @progress.ToString("F0")%
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="alert alert-success mt-3">
+        @saved
+        <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (points.Count > 0)
+{
+    <div class="mt-5">
+        <ComplexityChart Experimental="@points"
+                         Approximation="@approximation.Points"
+                         Title="f(v) = 1 — временная сложность"
+                         ApproximationName="Аппроксимация C"
+                         XAxisTitle="Размер массива n"
+                         YAxisTitle="Среднее время выполнения, мс"
+                         Height="520" />
+
+        <div class="alert alert-light border mt-4">
+            <strong>Аппроксимация:</strong><br />
+            T(n) ≈ @approximation.Coefficient.ToString("G6") мс<br />
+            R² = @approximation.R2.ToString("F4")
+        </div>
+
+        <div class="alert alert-secondary">
+            Время не зависит от n — что подтверждает сложность <strong>O(1)</strong>.
+        </div>
+    </div>
+}
 
 
 @code {
-    int maxN = 2000;
-    int step = 10;
-    int repeats = 1000;
-    int currentN;
-    bool isRunning;
-    string saved = "";
+    private const int Runs = 5;
+    private const int Repeats = 10000;
 
-    List<Pt> points = new();
-    List<Pt> theory = new();
+    private int maxN = 2000;
+    private int step = 50;
 
-    async Task Run()
+    private int currentN;
+    private int currentRun;
+    private double progress;
+    private bool running;
+
+    private string error = "";
+    private string saved = "";
+
+    private List<BenchmarkPoint> points = new();
+    private ApproximationResult approximation = new();
+
+    private async Task Run()
     {
-        isRunning = true;
+        if (running) return;
+
+        error = "";
         saved = "";
+
+        if (maxN < 1 || step < 1)
+        {
+            error = "n и шаг должны быть больше нуля.";
+            return;
+        }
+
+        running = true;
         points.Clear();
-        theory.Clear();
-        StateHasChanged();
-        await Task.Yield();
 
-        var rng = new Random(42);
+        var sizes = BuildSizes(maxN, step);
+        int completed = 0;
+        var rng = new Random();
 
-        Algo(new int[] { 1 });
-
-        for (int n = 1; n <= maxN; n += step)
-        {
-            currentN = n;
-            int[] v = Enumerable.Range(0, n).Select(_ => rng.Next(10000)).ToArray();
-
-            double total = 0;
-
-            for (int i = 0; i < 5; i++)
-            {
-                var sw = Stopwatch.StartNew();
-
-                for (int j = 0; j < repeats; j++)
-                {
-                    Algo(v);
-                }
-
-                sw.Stop();
-                total += sw.Elapsed.TotalMicroseconds / repeats;
-            }
-
-            double avg = total / 5;
-            points.Add(new Pt(n, avg));
-
-            if (n % (step * 10) == 0)
-            {
-                StateHasChanged();
-                await Task.Yield();
-            }
-        }
-
-        double average = points.Average(p => p.T);
-        foreach (var p in points)
-        {
-            theory.Add(new Pt(p.N, average));
-        }
-
-        var bpPoints = points.Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.T / 1000.0 }).ToList();
-        var approxPoints = theory.Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.T / 1000.0 }).ToList();
-        double yMean = bpPoints.Count > 0 ? bpPoints.Average(p => p.TimeMs) : 0;
-        double ssTot = bpPoints.Sum(p => Math.Pow(p.TimeMs - yMean, 2));
-        double ssRes = bpPoints.Zip(approxPoints, (a, b) => Math.Pow(a.TimeMs - b.TimeMs, 2)).Sum();
-        double r2 = ssTot < 1e-12 ? 1.0 : 1.0 - ssRes / ssTot;
-        var approx = new ApproximationResult { Coefficient = average / 1000.0, R2 = r2, Points = approxPoints };
         try
         {
-            await SaveService.SaveAsync("const", "f(v) = 1", "O(1)", maxN, step, 5, bpPoints, approx);
+            foreach (int n in sizes)
+            {
+                currentN = n;
+                int[] v = new int[n];
+                for (int i = 0; i < n; i++) v[i] = rng.Next(10000);
+
+                double total = 0;
+
+                for (int run = 1; run <= Runs; run++)
+                {
+                    currentRun = run;
+
+                    var sw = Stopwatch.StartNew();
+                    for (int j = 0; j < Repeats; j++) Algo(v);
+                    sw.Stop();
+
+                    total += sw.Elapsed.TotalMilliseconds / Repeats;
+
+                    progress = (completed + (double)run / Runs) * 100 / sizes.Count;
+                    StateHasChanged();
+                    await Task.Yield();
+                }
+
+                points.Add(new BenchmarkPoint { N = n, TimeMs = total / Runs });
+                completed++;
+            }
+
+            approximation = ApproximationService.Fit(points, ComplexityType.Constant);
+
+            await SaveService.SaveAsync(
+                "const", "f(v) = 1", "O(1)",
+                maxN, step, Runs, points, approximation);
+
             saved = "Эксперимент сохранён.";
         }
-        catch { }
-
-        isRunning = false;
-        currentN = 0;
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            progress = 100;
+            running = false;
+            currentN = 0;
+            currentRun = 0;
+        }
     }
 
-    int Algo(int[] v)
+    private static int Algo(int[] v) => 1;
+
+    private static List<int> BuildSizes(int max, int step)
     {
-        return 1;
+        var result = new List<int>();
+        for (int n = 1; n <= max; n += step) result.Add(n);
+        if (result.Count == 0 || result[^1] != max) result.Add(max);
+        return result;
     }
 
-    record Pt(int N, double T);
+    private string ProgressStyle =>
+        $"width:{progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}%;";
 }
