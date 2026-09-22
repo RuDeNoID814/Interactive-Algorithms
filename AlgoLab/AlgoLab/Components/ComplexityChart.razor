@@ -1,0 +1,174 @@
+﻿@using Microsoft.JSInterop
+
+@inject IJSRuntime JS
+
+<div>
+
+    @if (Experimental.Count == 0)
+    {
+        <div class="alert alert-secondary">
+            Нет данных для построения графика.
+        </div>
+    }
+    else
+    {
+        <div id="@chartId"
+             style="@ChartStyle">
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger mt-2">
+
+                Ошибка построения графика:
+
+                @errorMessage
+
+            </div>
+        }
+    }
+
+</div>
+
+
+@code {
+
+    [Parameter]
+    public IReadOnlyList<BenchmarkPoint> Experimental { get; set; }
+        = Array.Empty<BenchmarkPoint>();
+
+
+    [Parameter]
+    public IReadOnlyList<BenchmarkPoint> Approximation { get; set; }
+        = Array.Empty<BenchmarkPoint>();
+
+
+    [Parameter]
+    public string Title { get; set; }
+        = "Временная сложность";
+
+
+    [Parameter]
+    public string ApproximationName { get; set; }
+        = "Аппроксимация";
+
+
+    [Parameter]
+    public string XAxisTitle { get; set; }
+        = "Размер входных данных n";
+
+
+    [Parameter]
+    public string YAxisTitle { get; set; }
+        = "Время выполнения, мс";
+
+
+    [Parameter]
+    public int Height { get; set; }
+        = 500;
+
+
+    private readonly string chartId =
+        "complexity-"
+        +
+        Guid.NewGuid().ToString("N");
+
+
+    private bool shouldDraw;
+
+    private string errorMessage =
+        "";
+
+
+    private string ChartStyle =>
+        $"width:100%; height:{Height}px; min-height:{Height}px;";
+
+
+    protected override void OnParametersSet()
+    {
+        if (Experimental.Count > 0)
+        {
+            shouldDraw =
+                true;
+        }
+    }
+
+
+    protected override async Task OnAfterRenderAsync(
+        bool firstRender)
+    {
+        if (!shouldDraw)
+            return;
+
+
+        shouldDraw =
+            false;
+
+
+        errorMessage =
+            "";
+
+
+        try
+        {
+            var experimental =
+                Experimental
+                    .OrderBy(p => p.N)
+                    .Select(p => new
+                    {
+                        n =
+                            p.N,
+
+                        time =
+                            p.TimeMs
+                    })
+                    .ToArray();
+
+
+            var approximation =
+                Approximation
+                    .OrderBy(p => p.N)
+                    .Select(p => new
+                    {
+                        n =
+                            p.N,
+
+                        time =
+                            p.TimeMs
+                    })
+                    .ToArray();
+
+
+            await JS.InvokeVoidAsync(
+                "algoLabPlotly.drawComplexityChart",
+                chartId,
+                experimental,
+                approximation,
+                new
+                {
+                    title =
+                        Title,
+
+                    approximationName =
+                        ApproximationName,
+
+                    xTitle =
+                        XAxisTitle,
+
+                    yTitle =
+                        YAxisTitle,
+
+                    height =
+                        Height
+                });
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                ex.Message;
+
+
+            StateHasChanged();
+        }
+    }
+}

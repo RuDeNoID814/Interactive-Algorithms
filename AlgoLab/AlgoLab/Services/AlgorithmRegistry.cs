@@ -134,6 +134,22 @@ public static class AlgorithmRegistry
             ComplexityType = ComplexityType.Cubic,
             Slug = "matrix",
             Category = "Матрицы"
+        },
+        new()
+        {
+            Name = "Задача коммивояжёра",
+            Description =
+                "Поиск кратчайшего маршрута полным перебором",
+
+            Complexity = "O(n!)",
+
+            ComplexityType =
+                ComplexityType.Factorial,
+
+            Slug = "tsp",
+
+            Category =
+                "Труднорешаемые задачи"
         }
     ];
 

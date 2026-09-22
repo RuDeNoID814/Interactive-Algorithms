@@ -1,828 +1,257 @@
 ﻿@using System.Diagnostics
-
-<div>
-
-    <h3>Пузырьковая сортировка</h3>
-
-    <p>
-        Bubble Sort последовательно сравнивает соседние элементы
-        массива и меняет их местами, если левый элемент больше правого.
-        После каждого прохода максимальный элемент перемещается
-        в конец неотсортированной части массива.
-    </p>
-
-    <div class="alert alert-info">
-        <strong>Лучший случай:</strong> O(n)
-        <br />
-        <strong>Средний случай:</strong> O(n²)
-        <br />
-        <strong>Худший случай:</strong> O(n²)
-        <br />
-        <strong>Дополнительная память:</strong> O(1)
-    </div>
-
-    <hr class="my-4" />
-
-    <h3>Экспериментальный анализ</h3>
-
-    <p>
-        Для каждого размера входных данных алгоритм выполняется
-        пять раз. Для пяти запусков используются одинаковые
-        исходные данные. На графике отображается среднее
-        машинное время выполнения.
-    </p>
-
-
-    <!-- ПАРАМЕТРЫ -->
-
-    <div class="row">
-
-        <div class="col-md-4 mb-3">
-
-            <label class="form-label">
-                Максимальное n
-            </label>
-
-            <input type="number"
-                   class="form-control"
-                   min="1"
-                   @bind="maxN"
-                   disabled="@isRunning" />
-
-        </div>
-
-
-        <div class="col-md-4 mb-3">
-
-            <label class="form-label">
-                Шаг
-            </label>
-
-            <input type="number"
-                   class="form-control"
-                   min="1"
-                   @bind="step"
-                   disabled="@isRunning" />
-
-        </div>
-
-
-        <div class="col-md-4 mb-3">
-
-            <label class="form-label">
-                Количество запусков
-            </label>
-
-            <input type="text"
-                   class="form-control"
-                   value="@Runs"
-                   disabled />
-
-        </div>
-
-    </div>
-
-
-    <!-- ОШИБКИ -->
-    @if (!string.IsNullOrWhiteSpace(errorMessage))
-    {
-        <div class="alert alert-danger">
-            @errorMessage
-        </div>
-    }
-
-
-    <!-- ПРЕДУПРЕЖДЕНИЕ -->
-    @if (maxN >= 10000)
-    {
-        <div class="alert alert-warning">
-
-            <strong>Предупреждение.</strong>
-
-            Bubble Sort имеет квадратичную временную сложность
-            O(n²). При большом n эксперимент может выполняться
-            продолжительное время.
-
-        </div>
-    }
-
-
-    <!-- КНОПКА ЗАПУСКА -->
-
-    <button class="btn btn-success"
-            @onclick="RunExperiment"
-            disabled="@isRunning">
-
-        @(isRunning
-            ? "Эксперимент выполняется..."
-            : "Запустить эксперимент")
-
-    </button>
-
-
-    <!-- ПРОГРЕСС -->
-    @if (isRunning)
-    {
-        <div class="mt-4">
-
-            <div class="d-flex justify-content-between">
-
-                <span>
-                    n = <strong>@currentN</strong>,
-                    запуск
-                    <strong>@currentRun</strong>
-                    из @Runs
-                </span>
-
-                <strong>
-                    @(progress.ToString("F1"))%
-                </strong>
-
-            </div>
-
-
-            <div class="progress mt-2"
-                 style="height:25px;">
-
-                <div class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar"
-                     style="@GetProgressStyle()">
-
-                    @(progress.ToString("F0"))%
-
-                </div>
-
-            </div>
-
-
-            <div class="text-muted mt-2">
-
-                Обработано размеров:
-
-                <strong>@completedPoints</strong>
-
-                из
-
-                <strong>@totalPoints</strong>
-
-            </div>
-
-        </div>
-    }
-
-
-    <!-- РЕЗУЛЬТАТЫ -->
-    @if (points.Count > 0)
-    {
-        <div class="mt-5">
-
-            <h4>
-                Зависимость времени выполнения от n
-            </h4>
-
-
-            <!-- ГРАФИК -->
-
-            <ApexChart TItem="BenchmarkPoint"
-                       Height="430">
-
-                <!-- Эксперимент -->
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="points"
-                                 Name="Эксперимент"
-                                 SeriesType="SeriesType.Line"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)"
-                                 Color="#2563eb" />
-
-
-                <!-- Аппроксимация -->
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="approximation.Points"
-                                 Name="Аппроксимация C·n²"
-                                 SeriesType="SeriesType.Scatter"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)"
-                                 Color="#ef4444" />
-
-            </ApexChart>
-
-
-            <!-- КАРТОЧКИ -->
-
-            <div class="row mt-4">
-
-                <div class="col-md-3 mb-3">
-
-                    <div class="card h-100">
-
-                        <div class="card-body">
-
-                            <small class="text-muted">
-                                Коэффициент C
-                            </small>
-
-                            <h5>
-                                @(approximation.Coefficient.ToString("G6"))
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="col-md-3 mb-3">
-
-                    <div class="card h-100">
-
-                        <div class="card-body">
-
-                            <small class="text-muted">
-                                R²
-                            </small>
-
-                            <h5>
-                                @(approximation.R2.ToString("F4"))
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="col-md-3 mb-3">
-
-                    <div class="card h-100">
-
-                        <div class="card-body">
-
-                            <small class="text-muted">
-                                Точек
-                            </small>
-
-                            <h5>
-                                @points.Count
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="col-md-3 mb-3">
-
-                    <div class="card h-100">
-
-                        <div class="card-body">
-
-                            <small class="text-muted">
-                                Последнее время
-                            </small>
-
-                            <h5>
-                                @(points.Last().TimeMs.ToString("F3")) ms
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- АППРОКСИМАЦИЯ -->
-
-            <div class="alert alert-light border">
-
-                <h5>
-                    Аппроксимация
-                </h5>
-
-
-                <p class="mb-2">
-
-                    Экспериментальные результаты аппроксимируются
-                    функцией:
-
-                </p>
-
-
-                <div style="
-                    font-size:1.2rem;
-                    font-family:monospace;">
-
-                    T(n) ≈ @(approximation.Coefficient.ToString("G6")) · n²
-
-                </div>
-
-
-                <div class="mt-3">
-
-                    <strong>
-                        Коэффициент детерминации:
-                    </strong>
-
-                    R² = @(approximation.R2.ToString("F4"))
-
-                </div>
-
-
-                <small class="text-muted">
-
-                    Чем значение R² ближе к 1, тем лучше
-                    экспериментальные данные соответствуют
-                    выбранной теоретической зависимости.
-
-                </small>
-
-            </div>
-
-
-            <!-- ТЕОРИЯ -->
-
-            <div class="alert alert-secondary mt-3">
-
-                <strong>
-                    Теоретический анализ
-                </strong>
-
-
-                <p class="mt-2 mb-1">
-
-                    В худшем случае Bubble Sort выполняет:
-
-                </p>
-
-
-                <code>
-                    (n - 1) + (n - 2) + ... + 1 = n(n - 1) / 2
-                </code>
-
-
-                <p class="mt-2 mb-1">
-
-                    сравнений.
-
-                </p>
-
-
-                <p class="mb-0">
-
-                    При увеличении n доминирующим членом является
-                    n², поэтому временная сложность алгоритма:
-
-                    <strong>O(n²)</strong>.
-
-                </p>
-
-            </div>
-
-
-            <!-- ТАБЛИЦА -->
-
-            <div class="mt-4">
-
-                <h5>
-                    Последние результаты
-                </h5>
-
-
-                <div class="table-responsive">
-
-                    <table class="table table-sm table-striped">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    n
-                                </th>
-
-                                <th>
-                                    Среднее время, ms
-                                </th>
-
-                                <th>
-                                    Аппроксимация, ms
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            @foreach (var point in points.TakeLast(
-                                Math.Min(10, points.Count)))
-                            {
-                                var approximate =
-                                    approximation.Points
-                                        .FirstOrDefault(
-                                            p => p.N == point.N);
-
-
-                                <tr>
-
-                                    <td>
-                                        @point.N
-                                    </td>
-
-                                    <td>
-                                        @(point.TimeMs.ToString("F6"))
-                                    </td>
-
-                                    <td>
-
-                                        @(approximate is null
-                                            ? "-"
-                                            : approximate.TimeMs.ToString("F6"))
-
-                                    </td>
-
-                                </tr>
-                            }
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-    }
-
+@inject ExperimentSaveService SaveService
+
+<h3>Пузырьковая сортировка</h3>
+
+<p>
+    Bubble Sort сравнивает соседние элементы и меняет их местами,
+    если они расположены в неправильном порядке.
+</p>
+
+<div class="alert alert-info">
+    <strong>Лучший случай:</strong> O(n)<br />
+    <strong>Средний случай:</strong> O(n²)<br />
+    <strong>Худший случай:</strong> O(n²)<br />
+    <strong>Память:</strong> O(1)
 </div>
 
+<hr />
+
+<h3>Экспериментальный анализ</h3>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control"
+               @bind="maxN" disabled="@running" />
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control"
+               @bind="step" disabled="@running" />
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label>Запусков</label>
+        <input class="form-control" value="@Runs" disabled />
+    </div>
+</div>
+
+@if (maxN >= 10000)
+{
+    <div class="alert alert-warning">
+        Bubble Sort имеет сложность O(n²). Большое n может
+        потребовать значительного времени.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-success"
+        @onclick="Run"
+        disabled="@running">
+    @(running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (running)
+{
+    <div class="mt-4">
+        <div class="d-flex justify-content-between">
+            <span>n = @currentN, запуск @currentRun из @Runs</span>
+            <strong>@progress.ToString("F1")%</strong>
+        </div>
+
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="@ProgressStyle">
+                @progress.ToString("F0")%
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="alert alert-success mt-3">
+        @saved
+        <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (points.Count > 0)
+{
+    <div class="mt-5">
+
+        <ComplexityChart Experimental="@points"
+                         Approximation="@approximation.Points"
+                         Title="Bubble Sort — временная сложность"
+                         ApproximationName="Аппроксимация C·n²"
+                         XAxisTitle="Размер массива n"
+                         YAxisTitle="Среднее время выполнения, мс"
+                         Height="520" />
+
+        <div class="alert alert-light border mt-4">
+            <strong>Аппроксимация:</strong><br />
+            T(n) ≈ @approximation.Coefficient.ToString("G6") · n²<br />
+            R² = @approximation.R2.ToString("F4")
+        </div>
+
+        <div class="alert alert-secondary">
+            Количество сравнений в худшем случае:
+            n(n−1)/2. Следовательно, временная сложность
+            составляет <strong>O(n²)</strong>.
+        </div>
+    </div>
+}
 
 @code {
-
-    // =====================================================
-    // НАСТРОЙКИ
-    // =====================================================
-
     private const int Runs = 5;
 
     private int maxN = 2000;
-
     private int step = 50;
 
-
-    // =====================================================
-    // ПРОГРЕСС
-    // =====================================================
-
     private int currentN;
-
     private int currentRun;
-
-    private int totalPoints;
-
-    private int completedPoints;
-
     private double progress;
+    private bool running;
 
-    private bool isRunning;
+    private string error = "";
+    private string saved = "";
 
+    private List<BenchmarkPoint> points = new();
+    private ApproximationResult approximation = new();
 
-    // =====================================================
-    // РЕЗУЛЬТАТЫ
-    // =====================================================
-
-    private string errorMessage = "";
-
-    private List<BenchmarkPoint> points =
-        new();
-
-    private ApproximationResult approximation =
-        new();
-
-
-    // =====================================================
-    // ЗАПУСК ЭКСПЕРИМЕНТА
-    // =====================================================
-
-    private async Task RunExperiment()
+    private async Task Run()
     {
-        if (isRunning)
-            return;
+        if (running) return;
 
+        error = "";
+        saved = "";
 
-        errorMessage = "";
-
-
-        // Проверка n
-
-        if (maxN < 1)
+        if (maxN < 1 || step < 1)
         {
-            errorMessage =
-                "Максимальное n должно быть больше нуля.";
-
+            error = "n и шаг должны быть больше нуля.";
             return;
         }
 
-
-        // Проверка шага
-
-        if (step < 1)
-        {
-            errorMessage =
-                "Шаг должен быть больше нуля.";
-
-            return;
-        }
-
-
-        // Начало эксперимента
-
-        isRunning = true;
-
-
+        running = true;
         points.Clear();
 
+        var sizes = BuildSizes(maxN, step);
+        int completed = 0;
 
-        approximation =
-            new ApproximationResult();
+        var random = new Random();
 
-
-        completedPoints = 0;
-
-        progress = 0;
-
-        currentRun = 0;
-
-
-        // Количество точек:
-        //
-        // 1
-        // 1 + step
-        // 1 + 2 * step
-        // ...
-
-        totalPoints =
-            ((maxN - 1) / step)
-            + 1;
-
-
-        StateHasChanged();
-
-        await Task.Yield();
-
-
-        var random =
-            new Random();
-
-
-        // =================================================
-        // ПЕРЕБОР n
-        // =================================================
-
-        for (int n = 1;
-             n <= maxN;
-             n += step)
+        try
         {
-            currentN =
-                n;
-
-
-            // Создаём исходный массив.
-
-            int[] original =
-                new int[n];
-
-
-            for (int i = 0;
-                 i < original.Length;
-                 i++)
+            foreach (int n in sizes)
             {
-                original[i] =
-                    random.Next(
-                        0,
-                        100_000);
-            }
+                currentN = n;
 
+                var original = new int[n];
 
-            double totalTimeMs =
-                0;
+                for (int i = 0; i < n; i++)
+                    original[i] = random.Next(100_000);
 
+                double total = 0;
 
-            // =============================================
-            // ПЯТЬ ЗАПУСКОВ
-            // =============================================
-
-            for (int run = 1;
-                 run <= Runs;
-                 run++)
-            {
-                currentRun =
-                    run;
-
-
-                // Копирование массива происходит
-                // до запуска Stopwatch.
-
-                int[] data =
-                    (int[])original.Clone();
-
-
-                var stopwatch =
-                    Stopwatch.StartNew();
-
-
-                Sort(data);
-
-
-                stopwatch.Stop();
-
-
-                totalTimeMs +=
-                    stopwatch
-                        .Elapsed
-                        .TotalMilliseconds;
-
-
-                UpdateProgress(
-                    completedPoints,
-                    run);
-
-
-                StateHasChanged();
-
-
-                // Позволяет Blazor обновить интерфейс.
-
-                await Task.Yield();
-            }
-
-
-            // Среднее из пяти запусков.
-
-            double averageTime =
-                totalTimeMs
-                / Runs;
-
-
-            points.Add(
-                new BenchmarkPoint
+                for (int run = 1; run <= Runs; run++)
                 {
-                    N =
-                        n,
+                    currentRun = run;
 
-                    TimeMs =
-                        averageTime
+                    var data = (int[])original.Clone();
+
+                    var sw = Stopwatch.StartNew();
+                    Sort(data);
+                    sw.Stop();
+
+                    total += sw.Elapsed.TotalMilliseconds;
+
+                    progress =
+                        (completed + (double)run / Runs)
+                        * 100 / sizes.Count;
+
+                    StateHasChanged();
+                    await Task.Yield();
+                }
+
+                points.Add(new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs = total / Runs
                 });
 
+                completed++;
+            }
 
-            completedPoints++;
-
-
-            progress =
-                completedPoints
-                * 100.0
-                / totalPoints;
-
-
-            StateHasChanged();
-
-            await Task.Yield();
-        }
-
-
-        // =================================================
-        // АППРОКСИМАЦИЯ O(n²)
-        // =================================================
-
-        approximation =
-            ApproximationService.Fit(
+            approximation = ApproximationService.Fit(
                 points,
                 ComplexityType.Quadratic);
 
+            await SaveService.SaveAsync(
+                "bubble",
+                "Пузырьковая сортировка",
+                "O(n²)",
+                maxN,
+                step,
+                Runs,
+                points,
+                approximation);
 
-        // =================================================
-        // ЗАВЕРШЕНИЕ
-        // =================================================
-
-        progress =
-            100;
-
-
-        currentN =
-            0;
-
-
-        currentRun =
-            0;
-
-
-        isRunning =
-            false;
-
-
-        StateHasChanged();
-    }
-
-
-    // =====================================================
-    // ПРОГРЕСС
-    // =====================================================
-
-    private void UpdateProgress(
-        int finishedPoints,
-        int run)
-    {
-        if (totalPoints <= 0)
-        {
-            progress = 0;
-
-            return;
+            saved = "Эксперимент сохранён.";
         }
-
-
-        double completedWork =
-            finishedPoints
-            +
-            (double)run
-            / Runs;
-
-
-        progress =
-            Math.Min(
-                100,
-                completedWork
-                * 100
-                / totalPoints);
-    }
-
-
-    private string GetProgressStyle()
-    {
-        string value =
-            progress.ToString(
-                "F1",
-                System.Globalization
-                    .CultureInfo
-                    .InvariantCulture);
-
-
-        return $"width: {value}%;";
-    }
-
-
-    // =====================================================
-    // BUBBLE SORT
-    // =====================================================
-
-    private static void Sort(
-        int[] data)
-    {
-        for (int i = 0;
-             i < data.Length - 1;
-             i++)
+        catch (Exception ex)
         {
-            bool swapped =
-                false;
+            error = ex.Message;
+        }
+        finally
+        {
+            progress = 100;
+            running = false;
+            currentN = 0;
+            currentRun = 0;
+        }
+    }
 
+    private static void Sort(int[] data)
+    {
+        for (int i = 0; i < data.Length - 1; i++)
+        {
+            bool swapped = false;
 
-            for (int j = 0;
-                 j < data.Length - i - 1;
-                 j++)
+            for (int j = 0; j < data.Length - i - 1; j++)
             {
-                if (data[j] >
-                    data[j + 1])
+                if (data[j] > data[j + 1])
                 {
-                    (data[j],
-                     data[j + 1])
-                        =
-                    (data[j + 1],
-                     data[j]);
+                    (data[j], data[j + 1]) =
+                        (data[j + 1], data[j]);
 
-
-                    swapped =
-                        true;
+                    swapped = true;
                 }
             }
 
-
-            // Если обменов не было,
-            // массив уже отсортирован.
-
-            if (!swapped)
-            {
-                break;
-            }
+            if (!swapped) break;
         }
     }
+
+    private static List<int> BuildSizes(int max, int step)
+    {
+        var result = new List<int>();
+
+        for (int n = 1; n <= max; n += step)
+            result.Add(n);
+
+        if (result.Count == 0 || result[^1] != max)
+            result.Add(max);
+
+        return result;
+    }
+
+    private string ProgressStyle =>
+        $"width:{progress.ToString("F1",
+            System.Globalization.CultureInfo.InvariantCulture)}%;";
 }

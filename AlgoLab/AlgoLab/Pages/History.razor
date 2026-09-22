@@ -1,0 +1,236 @@
+﻿@page "/history"
+
+@inject ExperimentHistoryService HistoryService
+
+
+<PageTitle>
+    История экспериментов
+</PageTitle>
+
+
+<h2>
+    История экспериментов
+</h2>
+
+
+<p class="text-muted">
+    Ранее выполненные эксперименты и сохранённые
+    результаты измерения.
+</p>
+
+
+@if (loading)
+{
+    <div class="mt-4">
+
+        <div class="spinner-border">
+        </div>
+
+        <span class="ms-2">
+            Загрузка истории...
+        </span>
+
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+else if (experiments.Count == 0)
+{
+    <div class="alert alert-secondary mt-4">
+
+        История пока пуста.
+
+        Выполните эксперимент,
+        чтобы он появился здесь.
+
+    </div>
+}
+else
+{
+    <div class="row mt-4">
+
+        @foreach (var experiment in experiments)
+        {
+            <div class="col-md-6 mb-3">
+
+                <div class="card h-100">
+
+                    <div class="card-body">
+
+                        <div class="
+                            d-flex
+                            justify-content-between
+                            align-items-start">
+
+                            <div>
+
+                                <h5>
+                                    @experiment.AlgorithmName
+                                </h5>
+
+                                <span class="
+                                    badge
+                                    bg-primary">
+
+                                    @experiment.Complexity
+
+                                </span>
+
+                            </div>
+
+
+                            <small class="text-muted">
+
+                                @experiment.CreatedAt
+                                .ToLocalTime()
+                                .ToString(
+                                "dd.MM.yyyy HH:mm")
+
+                            </small>
+
+                        </div>
+
+
+                        <hr />
+
+
+                        <p class="mb-1">
+
+                            Максимальное n:
+
+                            <strong>
+                                @experiment.MaxN
+                            </strong>
+
+                        </p>
+
+
+                        <p class="mb-1">
+
+                            Шаг:
+
+                            <strong>
+                                @experiment.Step
+                            </strong>
+
+                        </p>
+
+
+                        <p class="mb-1">
+
+                            Запусков:
+
+                            <strong>
+                                @experiment.Runs
+                            </strong>
+
+                        </p>
+
+
+                        <p class="mb-3">
+
+                            R²:
+
+                            <strong>
+                                @experiment.R2.ToString("F4")
+                            </strong>
+
+                        </p>
+
+
+                        <a class="btn btn-primary"
+                           href="@($"/history/{experiment.Id}")">
+
+                            Открыть
+
+                        </a>
+
+
+                        <button class="btn btn-outline-danger ms-2"
+                                @onclick="() => Delete(experiment.Id)">
+
+                            Удалить
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+}
+
+
+@code {
+
+    private List<ExperimentDto>
+        experiments = new();
+
+
+    private bool loading =
+        true;
+
+
+    private string error =
+        "";
+
+
+    protected override async Task
+        OnInitializedAsync()
+    {
+        await Load();
+    }
+
+
+    private async Task Load()
+    {
+        try
+        {
+            loading =
+                true;
+
+
+            experiments =
+                await HistoryService
+                    .GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            error =
+                "Не удалось загрузить историю: "
+                + ex.Message;
+        }
+        finally
+        {
+            loading =
+                false;
+        }
+    }
+
+
+    private async Task Delete(
+        int id)
+    {
+        try
+        {
+            await HistoryService
+                .DeleteAsync(id);
+
+
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            error =
+                "Не удалось удалить запись: "
+                + ex.Message;
+        }
+    }
+}
