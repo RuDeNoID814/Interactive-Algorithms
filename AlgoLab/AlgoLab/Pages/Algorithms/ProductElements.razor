@@ -1,6 +1,7 @@
 @using System.Diagnostics
 @using System.Linq
 @using ApexCharts
+@inject ExperimentSaveService SaveService
 
 <div>
     <h3>Произведение элементов массива</h3>
@@ -33,6 +34,14 @@
     <button class="btn btn-primary mb-4" @onclick="Run" disabled="@isRunning">
         @(isRunning ? $"Считаю... n = {currentN}" : "Запустить эксперимент")
     </button>
+
+    @if (!string.IsNullOrEmpty(saved))
+    {
+        <div class="alert alert-success mt-2">
+            @saved
+            <a href="/history" class="alert-link ms-2">История</a>
+        </div>
+    }
 
     @if (points.Count > 0)
     {
@@ -71,6 +80,7 @@
     int repeats = 100;
     int currentN;
     bool isRunning;
+    string saved = "";
 
     List<Pt> points = new();
     List<Pt> theory = new();
@@ -78,6 +88,7 @@
     async Task Run()
     {
         isRunning = true;
+        saved = "";
         points.Clear();
         theory.Clear();
         StateHasChanged();
@@ -130,6 +141,20 @@
         {
             theory.Add(new Pt(p.N, c * p.N));
         }
+
+        var bpPoints = points.Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.T / 1000.0 }).ToList();
+        var approxPoints = theory.Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.T / 1000.0 }).ToList();
+        double yMean = bpPoints.Count > 0 ? bpPoints.Average(p => p.TimeMs) : 0;
+        double ssTot = bpPoints.Sum(p => Math.Pow(p.TimeMs - yMean, 2));
+        double ssRes = bpPoints.Zip(approxPoints, (a, b) => Math.Pow(a.TimeMs - b.TimeMs, 2)).Sum();
+        double r2 = ssTot < 1e-12 ? 1.0 : 1.0 - ssRes / ssTot;
+        var approx = new ApproximationResult { Coefficient = c / 1000.0, R2 = r2, Points = approxPoints };
+        try
+        {
+            await SaveService.SaveAsync("product", "Произведение элементов", "O(n)", maxN, step, 5, bpPoints, approx);
+            saved = "Эксперимент сохранён.";
+        }
+        catch { }
 
         isRunning = false;
         currentN = 0;
