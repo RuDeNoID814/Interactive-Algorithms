@@ -150,6 +150,15 @@ public static class AlgorithmRegistry
 
             Category =
                 "Труднорешаемые задачи"
+        },
+        new()
+        {
+            Name = "Обход в ширину (BFS)",
+            Description = "Обход графа уровень за уровнем через очередь",
+            Complexity = "O(V+E)",
+            ComplexityType = ComplexityType.Linear,
+            Slug = "bfs",
+            Category = "Графы"
         }
     ];
 
