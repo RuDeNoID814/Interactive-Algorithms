@@ -1,0 +1,282 @@
+﻿@using System.Diagnostics
+@using System.Collections.Generic
+@inject ExperimentSaveService SaveService
+
+<h3>Алгоритм Хаффмана</h3>
+
+<p>
+    Жадный алгоритм построения оптимального префиксного кода.
+    На каждом шаге из очереди с приоритетом извлекаются два узла
+    с наименьшими частотами и объединяются в новый узел с суммарной
+    частотой. Итоговое дерево минимизирует средневзвешенную длину кода.
+</p>
+
+<div class="alert alert-info">
+    <strong>Лучший случай:</strong> O(n log n)<br />
+    <strong>Средний случай:</strong> O(n log n)<br />
+    <strong>Худший случай:</strong> O(n log n)<br />
+    <strong>Память:</strong> O(n)
+</div>
+
+<hr />
+
+<h3>Экспериментальный анализ</h3>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control"
+               @bind="maxN" disabled="@running" />
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control"
+               @bind="step" disabled="@running" />
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label>Запусков</label>
+        <input class="form-control" value="@Runs" disabled />
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-success"
+        @onclick="Run"
+        disabled="@running">
+    @(running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (running)
+{
+    <div class="mt-4">
+        <div class="d-flex justify-content-between">
+            <span>n = @currentN, запуск @currentRun из @Runs</span>
+            <strong>@progress.ToString("F1")%</strong>
+        </div>
+
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="@ProgressStyle">
+                @progress.ToString("F0")%
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="alert alert-success mt-3">
+        @saved
+        <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (points.Count > 0)
+{
+    <div class="mt-5">
+
+        <ComplexityChart Experimental="@points"
+                         Approximation="@approximation.Points"
+                         Title="Алгоритм Хаффмана — временная сложность"
+                         ApproximationName="Аппроксимация C·n·log(n)"
+                         XAxisTitle="Количество символов n"
+                         YAxisTitle="Среднее время выполнения, мс"
+                         Height="520" />
+
+        <div class="alert alert-light border mt-4">
+            <strong>Аппроксимация:</strong><br />
+            T(n) ≈ @approximation.Coefficient.ToString("G6") · n·log(n)<br />
+            R² = @approximation.R2.ToString("F4")
+        </div>
+
+        <div class="alert alert-secondary">
+            Для построения дерева выполняется ровно <strong>n − 1</strong>
+            операций слияния. Каждая операция включает два извлечения
+            минимума и одну вставку в приоритетную очередь, что даёт
+            <strong>O(log n)</strong> на операцию. Итоговая сложность —
+            <strong>O(n log n)</strong>.
+        </div>
+    </div>
+}
+
+@code {
+    private const int Runs = 5;
+
+    private int maxN = 20000;
+    private int step = 1000;
+
+    private int currentN;
+    private int currentRun;
+    private double progress;
+    private bool running;
+
+    private string error = "";
+    private string saved = "";
+
+    private List<BenchmarkPoint> points = new();
+    private ApproximationResult approximation = new();
+
+    private async Task Run()
+    {
+        if (running) return;
+
+        error = "";
+        saved = "";
+
+        if (maxN < 1 || step < 1)
+        {
+            error = "n и шаг должны быть больше нуля.";
+            return;
+        }
+
+        running = true;
+        points.Clear();
+
+        var sizes = BuildSizes(maxN, step);
+        int completed = 0;
+
+        var random = new Random();
+
+        try
+        {
+            foreach (int n in sizes)
+            {
+                currentN = n;
+
+                // Генерируем n случайных частот символов
+                var original = new int[n];
+
+                for (int i = 0; i < n; i++)
+                    original[i] = random.Next(1, 100_000);
+
+                double total = 0;
+
+                for (int run = 1; run <= Runs; run++)
+                {
+                    currentRun = run;
+
+                    var data = (int[])original.Clone();
+
+                    var sw = Stopwatch.StartNew();
+                    HuffmanCore(data);
+                    sw.Stop();
+
+                    total += sw.Elapsed.TotalMilliseconds;
+
+                    progress =
+                        (completed + (double)run / Runs)
+                        * 100 / sizes.Count;
+
+                    StateHasChanged();
+                    await Task.Yield();
+                }
+
+                points.Add(new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs = total / Runs
+                });
+
+                completed++;
+            }
+
+            approximation = ApproximationService.Fit(
+                points,
+                ComplexityType.Linearithmic);
+
+            await SaveService.SaveAsync(
+                "huffman",
+                "Алгоритм Хаффмана",
+                "O(n log n)",
+                maxN,
+                step,
+                Runs,
+                points,
+                approximation);
+
+            saved = "Эксперимент сохранён.";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            progress = 100;
+            running = false;
+            currentN = 0;
+            currentRun = 0;
+        }
+    }
+
+    /// <summary>
+    /// Строит дерево Хаффмана и возвращает взвешенную длину пути
+    /// (сумма freq * depth по всем листьям) — основной результат
+    /// кодирования. Побочный эффект — построение дерева, время
+    /// которого мы и замеряем.
+    /// </summary>
+    private static long HuffmanCore(int[] frequencies)
+    {
+        var pq = new PriorityQueue<HuffmanNode, long>();
+
+        foreach (var f in frequencies)
+            pq.Enqueue(new HuffmanNode { Frequency = f }, f);
+
+        while (pq.Count > 1)
+        {
+            var a = pq.Dequeue();
+            var b = pq.Dequeue();
+
+            var parent = new HuffmanNode
+            {
+                Frequency = a.Frequency + b.Frequency,
+                Left = a,
+                Right = b
+            };
+
+            pq.Enqueue(parent, parent.Frequency);
+        }
+
+        var root = pq.Dequeue();
+        return WeightedPathLength(root, 0);
+    }
+
+    private static long WeightedPathLength(HuffmanNode node, int depth)
+    {
+        if (node.Left == null && node.Right == null)
+            return node.Frequency * (long)depth;
+
+        return WeightedPathLength(node.Left!, depth + 1)
+             + WeightedPathLength(node.Right!, depth + 1);
+    }
+
+    private class HuffmanNode
+    {
+        public long Frequency;
+        public HuffmanNode? Left;
+        public HuffmanNode? Right;
+    }
+
+    private static List<int> BuildSizes(int max, int step)
+    {
+        var result = new List<int>();
+
+        for (int n = 1; n <= max; n += step)
+            result.Add(n);
+
+        if (result.Count == 0 || result[^1] != max)
+            result.Add(max);
+
+        return result;
+    }
+
+    private string ProgressStyle =>
+        $"width:{progress.ToString("F1",
+            System.Globalization.CultureInfo.InvariantCulture)}%;";
+}
