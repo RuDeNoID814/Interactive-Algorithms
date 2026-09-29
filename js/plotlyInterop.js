@@ -1,5 +1,9 @@
 ﻿window.algoLabPlotly = {
 
+    // =====================================================
+    // 2D COMPLEXITY
+    // =====================================================
+
     drawComplexityChart: function (
         elementId,
         experimental,
@@ -9,269 +13,154 @@
         const element =
             document.getElementById(elementId);
 
-
         if (!element) {
             throw new Error(
-                "Не найден HTML-элемент графика: "
-                + elementId
+                "Не найден элемент графика: " + elementId
             );
         }
-
 
         if (typeof Plotly === "undefined") {
-            throw new Error(
-                "Библиотека Plotly не загружена."
-            );
+            throw new Error("Plotly не загружен.");
         }
-
 
         if (!experimental ||
             experimental.length === 0) {
-
-            throw new Error(
-                "Нет экспериментальных данных."
-            );
+            return;
         }
 
 
-        const experimentX =
-            experimental.map(
-                p => Number(p.n));
+        const expX =
+            experimental.map(p => Number(p.n));
 
-
-        const experimentY =
-            experimental.map(
-                p => Number(p.time));
+        const expY =
+            experimental.map(p => Number(p.time));
 
 
         const theoryX =
-            approximation.map(
-                p => Number(p.n));
-
+            approximation.map(p => Number(p.n));
 
         const theoryY =
-            approximation.map(
-                p => Number(p.time));
+            approximation.map(p => Number(p.time));
 
 
-        const isStepCount =
-            (options.yTitle || "")
-                .toLowerCase()
-                .includes("шаг");
+        const traces = [
 
-        const hoverY =
-            isStepCount
-                ? "Шагов = %{y:.0f}"
-                : "Время = %{y:.6f} мс";
+            {
+                x: expX,
+                y: expY,
 
+                type: "scatter",
+                mode: "lines+markers",
 
-        const experimentTrace = {
+                name: "Эксперимент",
 
-            x:
-                experimentX,
-
-            y:
-                experimentY,
-
-            type:
-                "scatter",
-
-            mode:
-                "lines+markers",
-
-            name:
-                "Эксперимент",
-
-            line: {
-                color:
-                    "#2563eb",
-
-                width:
-                    3
-            },
-
-            marker: {
-                color:
-                    "#2563eb",
-
-                size:
-                    6
-            },
-
-            hovertemplate:
-                "n = %{x}<br>" +
-                hoverY +
-                "<extra>Эксперимент</extra>"
-        };
-
-
-        const theoryTrace = {
-
-            x:
-                theoryX,
-
-            y:
-                theoryY,
-
-            type:
-                "scatter",
-
-            mode:
-                "lines",
-
-            name:
-                options.approximationName
-                || "Аппроксимация",
-
-            line: {
-                color:
-                    "#ef4444",
-
-                width:
-                    4,
-
-                dash:
-                    "dash"
-            },
-
-            hovertemplate:
-                "n = %{x}<br>" +
-                hoverY +
-                "<extra>Аппроксимация</extra>"
-        };
-
-
-        const minX =
-            Math.min(...experimentX);
-
-
-        const maxX =
-            Math.max(...experimentX);
-
-
-        const layout = {
-
-            title: {
-                text:
-                    options.title
-                    || "Временная сложность"
-            },
-
-
-            height:
-                options.height
-                || 500,
-
-
-            autosize:
-                true,
-
-
-            xaxis: {
-
-                title: {
-                    text:
-                        options.xTitle
-                        || "Размер входных данных n"
+                line: {
+                    color: "#2563eb",
+                    width: 3
                 },
 
-                type:
-                    "linear",
-
-                range: [
-                    minX,
-                    maxX
-                ],
-
-                autorange:
-                    false,
-
-                tickformat:
-                    ",d",
-
-                showgrid:
-                    true
+                marker: {
+                    color: "#2563eb",
+                    size: 6
+                }
             },
 
+            {
+                x: theoryX,
+                y: theoryY,
 
-            yaxis: {
+                type: "scatter",
+                mode: "lines",
 
-                title: {
-                    text:
-                        options.yTitle
-                        || "Время выполнения, мс"
-                },
+                name:
+                    options.approximationName
+                    || "Аппроксимация",
 
-                rangemode:
-                    "tozero",
-
-                showgrid:
-                    true
-            },
-
-
-            legend: {
-
-                orientation:
-                    "h",
-
-                x:
-                    0.5,
-
-                xanchor:
-                    "center",
-
-                y:
-                    -0.2
-            },
-
-
-            margin: {
-                l: 90,
-                r: 40,
-                t: 70,
-                b: 100
-            },
-
-
-            hovermode:
-                "x unified"
-        };
-
-
-        const config = {
-
-            responsive:
-                true,
-
-            displaylogo:
-                false,
-
-            scrollZoom:
-                true
-        };
+                line: {
+                    color: "#ef4444",
+                    width: 4,
+                    dash: "dash"
+                }
+            }
+        ];
 
 
         Plotly.react(
             element,
-            [
-                experimentTrace,
-                theoryTrace
-            ],
-            layout,
-            config
+            traces,
+            {
+                title: {
+                    text:
+                        options.title
+                        || "Временная сложность"
+                },
+
+                height:
+                    options.height
+                    || 500,
+
+                xaxis: {
+                    title: {
+                        text:
+                            options.xTitle
+                            || "Размер входных данных n"
+                    },
+
+                    range: [
+                        Math.min(...expX),
+                        Math.max(...expX)
+                    ],
+
+                    autorange: false
+                },
+
+                yaxis: {
+                    title: {
+                        text:
+                            options.yTitle
+                            || "Время выполнения, мс"
+                    },
+
+                    rangemode: "tozero"
+                },
+
+                legend: {
+                    orientation: "h",
+                    x: 0.5,
+                    xanchor: "center",
+                    y: -0.2
+                },
+
+                margin: {
+                    l: 90,
+                    r: 40,
+                    t: 70,
+                    b: 100
+                },
+
+                hovermode: "x unified"
+            },
+
+            {
+                responsive: true,
+                displaylogo: false
+            }
         );
     },
 
 
-    drawMatrix3D: function (
+    // =====================================================
+    // MATRIX SURFACE
+    // =====================================================
+
+    drawMatrixSurface: function (
         elementId,
-        points) {
+        nValues,
+        mValues,
+        zValues) {
 
         const element =
-            document.getElementById(
-                elementId);
-
+            document.getElementById(elementId);
 
         if (!element) {
             throw new Error(
@@ -279,114 +168,244 @@
             );
         }
 
-
         if (typeof Plotly === "undefined") {
-            throw new Error(
-                "Библиотека Plotly не загружена."
-            );
+            throw new Error("Plotly не загружен.");
         }
-
-
-        const x =
-            points.map(
-                p => Number(p.n));
-
-
-        const y =
-            points.map(
-                p => Number(p.run));
-
-
-        const z =
-            points.map(
-                p => Number(p.timeMs));
 
 
         const trace = {
 
-            x: x,
+            x: nValues,
+            y: mValues,
+            z: zValues,
 
-            y: y,
+            type: "surface",
 
-            z: z,
+            colorscale: "Viridis",
 
-            type:
-                "scatter3d",
-
-            mode:
-                "markers",
-
-            marker: {
-
-                size:
-                    5,
-
-                color:
-                    z,
-
-                colorscale:
-                    "Viridis",
-
-                opacity:
-                    0.9,
-
-                colorbar: {
-                    title:
-                        "Время, мс"
-                }
-            }
-        };
-
-
-        const layout = {
-
-            title: {
-                text:
-                    "3D — умножение матриц"
+            colorbar: {
+                title: "Время, мс"
             },
 
-
-            height:
-                600,
-
-
-            scene: {
-
-                xaxis: {
-                    title: {
-                        text:
-                            "Размер матрицы n"
-                    }
-                },
-
-                yaxis: {
-                    title: {
-                        text:
-                            "Номер запуска"
-                    }
-                },
-
-                zaxis: {
-                    title: {
-                        text:
-                            "Время, мс"
-                    }
-                }
-            }
+            hovertemplate:
+                "n = %{x}<br>" +
+                "m = %{y}<br>" +
+                "Время = %{z:.6f} мс" +
+                "<extra></extra>"
         };
 
 
         Plotly.react(
             element,
             [trace],
-            layout,
-            {
-                responsive:
-                    true,
 
-                displaylogo:
-                    false
+            {
+                title: {
+                    text:
+                        "3D-поверхность времени умножения матриц"
+                },
+
+                height: 650,
+
+                scene: {
+
+                    xaxis: {
+                        title: {
+                            text: "Размер n"
+                        }
+                    },
+
+                    yaxis: {
+                        title: {
+                            text: "Размер m"
+                        }
+                    },
+
+                    zaxis: {
+                        title: {
+                            text: "Среднее время, мс"
+                        }
+                    }
+                },
+
+                margin: {
+                    l: 0,
+                    r: 0,
+                    b: 0,
+                    t: 70
+                }
+            },
+
+            {
+                responsive: true,
+                displaylogo: false
             }
         );
+    },
+
+
+    // =====================================================
+    // HISTORY COMPARISON
+    // =====================================================
+
+    drawHistoryComparison: function (
+        elementId,
+        series) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (!element) {
+            throw new Error(
+                "Не найден элемент графика сравнения."
+            );
+        }
+
+        if (typeof Plotly === "undefined") {
+            throw new Error("Plotly не загружен.");
+        }
+
+        if (!series ||
+            series.length === 0) {
+            return;
+        }
+
+
+        const colors = [
+            "#2563eb",
+            "#ef4444",
+            "#22c55e",
+            "#f59e0b",
+            "#8b5cf6",
+            "#06b6d4",
+            "#ec4899",
+            "#64748b",
+            "#84cc16",
+            "#f97316"
+        ];
+
+
+        const traces =
+            series.map(
+                (item, index) => {
+
+                    return {
+
+                        x:
+                            item.points.map(
+                                p => Number(p.n)),
+
+                        y:
+                            item.points.map(
+                                p => Number(p.timeMs)),
+
+                        type:
+                            "scatter",
+
+                        mode:
+                            "lines+markers",
+
+                        name:
+                            item.name,
+
+                        line: {
+                            width: 3,
+                            color:
+                                colors[
+                                index
+                                % colors.length]
+                        },
+
+                        marker: {
+                            size: 6,
+                            color:
+                                colors[
+                                index
+                                % colors.length]
+                        },
+
+                        hovertemplate:
+                            "n = %{x}<br>" +
+                            "Время = %{y:.6f} мс" +
+                            "<extra>" +
+                            item.name +
+                            "</extra>"
+                    };
+                });
+
+
+        Plotly.react(
+            element,
+            traces,
+
+            {
+                title: {
+                    text:
+                        "Сравнение сохранённых экспериментов"
+                },
+
+                height: 600,
+
+                xaxis: {
+                    title: {
+                        text:
+                            "Размер входных данных n"
+                    }
+                },
+
+                yaxis: {
+                    title: {
+                        text:
+                            "Среднее время выполнения, мс"
+                    },
+
+                    rangemode:
+                        "tozero"
+                },
+
+                legend: {
+                    orientation:
+                        "h",
+
+                    x:
+                        0.5,
+
+                    xanchor:
+                        "center",
+
+                    y:
+                        -0.2
+                },
+
+                margin: {
+                    l: 90,
+                    r: 40,
+                    t: 70,
+                    b: 120
+                },
+
+                hovermode:
+                    "closest"
+            },
+
+            {
+                responsive: true,
+                displaylogo: false,
+                scrollZoom: true
+            }
+        );
+    },
+
+
+    purge: function (elementId) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (element &&
+            typeof Plotly !== "undefined") {
+
+            Plotly.purge(element);
+        }
     }
 };
