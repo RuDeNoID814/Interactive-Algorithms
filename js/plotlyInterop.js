@@ -54,6 +54,17 @@
                 p => Number(p.time));
 
 
+        const isStepCount =
+            (options.yTitle || "")
+                .toLowerCase()
+                .includes("шаг");
+
+        const hoverY =
+            isStepCount
+                ? "Шагов = %{y:.0f}"
+                : "Время = %{y:.6f} мс";
+
+
         const experimentTrace = {
 
             x:
@@ -89,7 +100,7 @@
 
             hovertemplate:
                 "n = %{x}<br>" +
-                "Время = %{y:.6f} мс" +
+                hoverY +
                 "<extra>Эксперимент</extra>"
         };
 
@@ -125,7 +136,7 @@
 
             hovertemplate:
                 "n = %{x}<br>" +
-                "Время = %{y:.6f} мс" +
+                hoverY +
                 "<extra>Аппроксимация</extra>"
         };
 
