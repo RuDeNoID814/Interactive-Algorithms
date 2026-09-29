@@ -532,6 +532,13 @@
 }
 
 
+<CachePromptDialog Show="showCachePrompt2D" Experiment="cachedExperiment2D"
+                   OnUseCache="UseCachedResult2D" OnRecalculate="ForceRecalculate2D" />
+
+<CachePromptDialog Show="showCachePrompt3D" Experiment="cachedExperiment3D"
+                   OnUseCache="UseCachedResult3D" OnRecalculate="ForceRecalculate3D" />
+
+
 @code {
 
     private const int Runs = 5;
@@ -606,6 +613,24 @@
 
 
     // =====================================================
+    // CACHE
+    // =====================================================
+
+    private bool showCachePrompt2D;
+
+    private ExperimentDto? cachedExperiment2D;
+
+    private bool forceRecalculate2D;
+
+
+    private bool showCachePrompt3D;
+
+    private ExperimentDto? cachedExperiment3D;
+
+    private bool forceRecalculate3D;
+
+
+    // =====================================================
     // COMMON STATE
     // =====================================================
 
@@ -650,6 +675,29 @@
                 "Параметры 2D должны быть больше нуля.";
 
             return;
+        }
+
+
+        if (!forceRecalculate2D)
+        {
+            try
+            {
+                var cache =
+                    await SaveService.CheckCacheAsync(
+                        "matrix", maxN2D, step2D, Runs);
+
+                if (cache != null)
+                {
+                    cachedExperiment2D = cache;
+                    showCachePrompt2D = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Ошибка проверки кэша: {ex.Message}");
+            }
         }
 
 
@@ -830,6 +878,29 @@
                 "Все параметры 3D должны быть больше нуля.";
 
             return;
+        }
+
+
+        if (!forceRecalculate3D)
+        {
+            try
+            {
+                var cache =
+                    await SaveService.CheckCacheAsync(
+                        "matrix-3d", maxN3D, stepN3D, Runs);
+
+                if (cache != null)
+                {
+                    cachedExperiment3D = cache;
+                    showCachePrompt3D = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Ошибка проверки кэша: {ex.Message}");
+            }
         }
 
 
@@ -1092,6 +1163,77 @@
 
             StateHasChanged();
         }
+    }
+
+
+    // =====================================================
+    // CACHE
+    // =====================================================
+
+    private void UseCachedResult2D()
+    {
+        showCachePrompt2D = false;
+        if (cachedExperiment2D == null) return;
+
+        points2D = cachedExperiment2D.Points
+            .Where(p => p.IsAverage)
+            .Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.TimeMs })
+            .ToList();
+
+        var approxPoints = cachedExperiment2D.Points
+            .Where(p => p.IsAverage)
+            .Select(p => new BenchmarkPoint { N = p.N, TimeMs = p.ApproximationTimeMs })
+            .ToList();
+
+        approximation2D = new ApproximationResult
+        {
+            Coefficient = cachedExperiment2D.ApproximationCoefficient,
+            R2 = cachedExperiment2D.R2,
+            Points = approxPoints
+        };
+
+        StateHasChanged();
+    }
+
+    private async Task ForceRecalculate2D()
+    {
+        showCachePrompt2D = false;
+        forceRecalculate2D = true;
+        await Run2D();
+        forceRecalculate2D = false;
+    }
+
+    private void UseCachedResult3D()
+    {
+        showCachePrompt3D = false;
+        if (cachedExperiment3D == null) return;
+
+        surfacePoints = cachedExperiment3D.Points
+            .Where(p => p.Is3D)
+            .Select(p => new MatrixSurfacePoint { N = p.N, M = p.M, TimeMs = p.TimeMs })
+            .ToList();
+
+        surfaceN = surfacePoints.Select(p => p.N).Distinct().OrderBy(n => n).ToList();
+        surfaceM = surfacePoints.Select(p => p.M).Distinct().OrderBy(m => m).ToList();
+
+        surfaceZ = surfaceM
+            .Select(m => surfaceN
+                .Select(n => surfacePoints.First(p => p.N == n && p.M == m).TimeMs)
+                .ToArray())
+            .ToArray();
+
+        hasSurface = true;
+        drawSurface = true;
+
+        StateHasChanged();
+    }
+
+    private async Task ForceRecalculate3D()
+    {
+        showCachePrompt3D = false;
+        forceRecalculate3D = true;
+        await Run3D();
+        forceRecalculate3D = false;
     }
 
 
