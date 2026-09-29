@@ -1,0 +1,31 @@
+﻿@if (Show && Experiment != null)
+{
+    <div class="modal" style="display:block; background:rgba(0,0,0,0.5); position:fixed; top:0; left:0; width:100%; height:100%; z-index:1050;">
+        <div class="modal-dialog" style="margin-top: 10%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Найден сохраненный эксперимент</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Эксперимент с параметрами <strong>n=@Experiment.MaxN, шаг=@Experiment.Step, прогоны=@Experiment.Runs</strong> уже проводился @Experiment.CreatedAt.ToLocalTime().ToString("g").</p>
+                    <p>Использовать сохраненный результат или пересчитать заново?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="OnUseCache">
+                        Использовать кэш
+                    </button>
+                    <button type="button" class="btn btn-warning" @onclick="OnRecalculate">
+                        Пересчитать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public ExperimentDto? Experiment { get; set; }
+    [Parameter] public EventCallback OnUseCache { get; set; }
+    [Parameter] public EventCallback OnRecalculate { get; set; }
+}

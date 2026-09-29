@@ -62,4 +62,21 @@ public class ExperimentHistoryService
 
         response.EnsureSuccessStatusCode();
     }
+
+    // Вызов нового эндпоинта
+
+    public async Task<ExperimentDto?> FindByParametersAsync(
+        string slug, int maxN, int step, int runs)
+    {
+        var response = await _http.GetAsync(
+            $"api/experiments/search?slug={slug}&maxN={maxN}&step={step}&runs={runs}");
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null; // Кэш не найден
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ExperimentDto>();
+    }
 }

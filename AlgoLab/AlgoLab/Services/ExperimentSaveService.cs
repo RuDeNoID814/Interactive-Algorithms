@@ -83,4 +83,12 @@ public class ExperimentSaveService
         return await _historyService
             .SaveAsync(experiment);
     }
+
+    // хз чо это
+
+    public async Task<ExperimentDto?> CheckCacheAsync(
+        string slug, int maxN, int step, int runs)
+    {
+        return await _historyService.FindByParametersAsync(slug, maxN, step, runs);
+    }
 }
