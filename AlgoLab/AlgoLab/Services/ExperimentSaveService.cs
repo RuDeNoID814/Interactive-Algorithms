@@ -22,23 +22,30 @@ public class ExperimentSaveService
         int runs,
         IReadOnlyList<BenchmarkPoint> points,
         ApproximationResult approximation,
-        IReadOnlyList<BenchmarkPoint>? individualRuns = null)
+        IReadOnlyList<BenchmarkPoint>? individualRuns = null,
+        IReadOnlyList<MatrixSurfacePoint>? surfacePoints = null)
     {
-        var experiment = new ExperimentDto
-        {
-            AlgorithmSlug = slug,
-            AlgorithmName = name,
-            Complexity = complexity,
-            MaxN = maxN,
-            Step = step,
-            Runs = runs,
-            ApproximationCoefficient =
-                approximation.Coefficient,
-            R2 = approximation.R2
-        };
+        var experiment =
+            new ExperimentDto
+            {
+                AlgorithmSlug = slug,
+                AlgorithmName = name,
+                Complexity = complexity,
+                MaxN = maxN,
+                Step = step,
+                Runs = runs,
+
+                ApproximationCoefficient =
+                    approximation.Coefficient,
+
+                R2 =
+                    approximation.R2
+            };
 
 
-        // Средние точки — используются обычным 2D-графиком.
+        // =========================================
+        // ОБЫЧНЫЕ 2D-ТОЧКИ
+        // =========================================
 
         foreach (var point in points)
         {
@@ -47,21 +54,29 @@ public class ExperimentSaveService
                     .FirstOrDefault(
                         p => p.N == point.N);
 
+
             experiment.Points.Add(
                 new ExperimentPointDto
                 {
                     N = point.N,
+                    M = 0,
                     Run = 0,
-                    TimeMs = point.TimeMs,
+
+                    TimeMs =
+                        point.TimeMs,
+
                     ApproximationTimeMs =
                         approximate?.TimeMs ?? 0,
-                    IsAverage = true
+
+                    IsAverage = true,
+                    Is3D = false
                 });
         }
 
 
-        // Отдельные запуски.
-        // Нужны, например, для 3D матриц.
+        // =========================================
+        // ОТДЕЛЬНЫЕ ЗАПУСКИ
+        // =========================================
 
         if (individualRuns is not null)
         {
@@ -71,10 +86,47 @@ public class ExperimentSaveService
                     new ExperimentPointDto
                     {
                         N = point.N,
+                        M = 0,
+
                         Run = point.Run,
-                        TimeMs = point.TimeMs,
+
+                        TimeMs =
+                            point.TimeMs,
+
                         ApproximationTimeMs = 0,
-                        IsAverage = false
+
+                        IsAverage = false,
+                        Is3D = false
+                    });
+            }
+        }
+
+
+        // =========================================
+        // MATRIX SURFACE
+        // =========================================
+
+        if (surfacePoints is not null)
+        {
+            foreach (var point in surfacePoints)
+            {
+                experiment.Points.Add(
+                    new ExperimentPointDto
+                    {
+                        N = point.N,
+
+                        M = point.M,
+
+                        Run = 0,
+
+                        TimeMs =
+                            point.TimeMs,
+
+                        ApproximationTimeMs = 0,
+
+                        IsAverage = false,
+
+                        Is3D = true
                     });
             }
         }
