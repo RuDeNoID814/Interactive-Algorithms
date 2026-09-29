@@ -97,4 +97,27 @@ public class ExperimentsController : ControllerBase
 
         return NoContent();
     }
+
+    // Поиск эксперимета по алгоритму
+
+    [HttpGet("search")]
+    public async Task<ActionResult<Experiment>> Search(
+        [FromQuery] string slug,
+        [FromQuery] int maxN,
+        [FromQuery] int step,
+        [FromQuery] int runs)
+    {
+        var experiment = await _db.Experiments
+            .Include(e => e.Points)
+            .FirstOrDefaultAsync(e =>
+                e.AlgorithmSlug == slug &&
+                e.MaxN == maxN &&
+                e.Step == step &&
+                e.Runs == runs);
+
+        if (experiment is null)
+            return NotFound();
+
+        return Ok(experiment);
+    }
 }

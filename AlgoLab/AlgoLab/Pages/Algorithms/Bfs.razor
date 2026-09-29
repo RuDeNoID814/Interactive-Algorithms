@@ -1,12 +1,9 @@
 @using System.Diagnostics
-@inject ExperimentSaveService SaveService
+@inherits AlgorithmExperimentBase
 
 <h3>Обход в ширину (BFS)</h3>
 
-<p>
-    Алгоритм обходит граф уровень за уровнем, используя очередь.
-    Начинает с корневой вершины, посещает всех соседей, затем соседей соседей и т.д.
-</p>
+<p>Алгоритм обходит граф уровень за уровнем, используя очередь. Начинает с корневой вершины, посещает всех соседей, затем соседей соседей и т.д.</p>
 
 <div class="alert alert-info">
     <strong>Сложность:</strong> O(V + E), где V — вершины, E — рёбра<br />
@@ -15,14 +12,12 @@
 </div>
 
 <hr />
-
 <h5>Визуализация</h5>
 
 <p class="text-muted small">
     Дерево обходится уровень за уровнем. Можно добавлять вершины вручную.
 </p>
 
-<!-- Добавление вершины -->
 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
     <label class="mb-0">Добавить дочернюю вершину к узлу:</label>
     <select class="form-select form-select-sm" style="width:80px"
@@ -32,24 +27,18 @@
             <option value="@i">@i</option>
         }
     </select>
-    <button class="btn btn-sm btn-outline-primary"
-            @onclick="AddNode"
-            disabled="@vizRunning">
+    <button class="btn btn-sm btn-outline-primary" @onclick="AddNode" disabled="@vizRunning">
         + Добавить
     </button>
-    <button class="btn btn-sm btn-outline-danger"
-            @onclick="ResetTree"
-            disabled="@vizRunning">
+    <button class="btn btn-sm btn-outline-danger" @onclick="ResetTree" disabled="@vizRunning">
         Сбросить дерево
     </button>
 </div>
 
-<!-- SVG граф -->
 <div class="mb-3" style="overflow-x:auto">
     @((MarkupString)BuildSvg())
 </div>
 
-<!-- Легенда -->
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <span><span style="color:#6b7280">■</span> Не посещена</span>
     <span><span style="color:#f59e0b">■</span> В очереди</span>
@@ -57,7 +46,6 @@
     <span><span style="color:#10b981">■</span> Посещена</span>
 </div>
 
-<!-- Очередь и порядок -->
 <div class="row mb-3">
     <div class="col-md-6">
         <div class="card card-body p-2">
@@ -69,10 +57,12 @@
                 }
                 else if (vizQueue.Count == 0)
                 {
+
                     <span class="text-muted">[ ]</span>
                 }
                 else
                 {
+
                     <span>[ @string.Join(", ", vizQueue) ]</span>
                 }
             </div>
@@ -88,6 +78,7 @@
                 }
                 else
                 {
+
                     <span>@string.Join(" → ", vizOrder)</span>
                 }
             </div>
@@ -95,27 +86,15 @@
     </div>
 </div>
 
-<!-- Кнопки BFS -->
 <div class="d-flex gap-2 mb-5">
-    <button class="btn btn-primary"
-            @onclick="VizStep"
-            disabled="@(vizDone || vizRunning)">
-        Шаг
-    </button>
-    <button class="btn btn-success"
-            @onclick="VizAutoRun"
-            disabled="@(vizDone || vizRunning)">
+    <button class="btn btn-primary" @onclick="VizStep" disabled="@(vizDone || vizRunning)">Шаг</button>
+    <button class="btn btn-success" @onclick="VizAutoRun" disabled="@(vizDone || vizRunning)">
         @(vizRunning ? "Идёт..." : "Авто")
     </button>
-    <button class="btn btn-secondary"
-            @onclick="VizReset"
-            disabled="@vizRunning">
-        Сбросить обход
-    </button>
+    <button class="btn btn-secondary" @onclick="VizReset" disabled="@vizRunning">Сбросить обход</button>
 </div>
 
 <hr />
-
 <h5>Экспериментальный анализ</h5>
 
 <p class="text-muted small">
@@ -126,14 +105,12 @@
     <div class="col-md-4 mb-3">
         <label>Максимальное n</label>
         <input type="number" min="100" max="100000" step="100"
-               class="form-control"
-               @bind="maxN" disabled="@benchRunning" />
+               class="form-control" @bind="MaxN" disabled="@Running" />
     </div>
     <div class="col-md-4 mb-3">
         <label>Шаг</label>
         <input type="number" min="50" max="2000" step="50"
-               class="form-control"
-               @bind="benchStep" disabled="@benchRunning" />
+               class="form-control" @bind="Step" disabled="@Running" />
     </div>
     <div class="col-md-4 mb-3">
         <label>Запусков</label>
@@ -141,46 +118,42 @@
     </div>
 </div>
 
-@if (!string.IsNullOrEmpty(benchError))
+@if (!string.IsNullOrEmpty(Error))
 {
-    <div class="alert alert-danger">@benchError</div>
+    <div class="alert alert-danger">@Error</div>
 }
 
-<button class="btn btn-success"
-        @onclick="RunBenchmark"
-        disabled="@benchRunning">
-    @(benchRunning ? "Выполняется..." : "Запустить эксперимент")
+<button class="btn btn-success" @onclick="OnRunClicked" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить эксперимент")
 </button>
 
-@if (benchRunning)
+@if (Running)
 {
     <div class="mt-4">
         <div class="d-flex justify-content-between">
-            <span>n = @currentBenchN</span>
-            <strong>@progress.ToString("F1")%</strong>
+            <span>n = @CurrentN</span>
+            <strong>@Progress.ToString("F1")%</strong>
         </div>
         <div class="progress mt-2" style="height:25px">
-            <div class="progress-bar progress-bar-striped progress-bar-animated"
-                 style="@ProgressStyle">
-                @progress.ToString("F0")%
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="@ProgressStyle">
+                @Progress.ToString("F0")%
             </div>
         </div>
     </div>
 }
 
-@if (!string.IsNullOrEmpty(saved))
+@if (!string.IsNullOrEmpty(Saved))
 {
     <div class="alert alert-success mt-3">
-        @saved
-        <a href="/history" class="alert-link ms-2">История</a>
+        @Saved <a href="/history" class="alert-link ms-2">История</a>
     </div>
 }
 
-@if (benchPoints.Count > 0)
+@if (Points.Count > 0)
 {
     <div class="mt-5">
-        <ComplexityChart Experimental="@benchPoints"
-                         Approximation="@approximation.Points"
+        <ComplexityChart Experimental="@Points"
+                         Approximation="@Approximation.Points"
                          Title="BFS — временная сложность"
                          ApproximationName="Аппроксимация C·n"
                          XAxisTitle="Количество вершин n"
@@ -189,8 +162,8 @@
 
         <div class="alert alert-light border mt-4">
             <strong>Аппроксимация:</strong><br />
-            T(n) ≈ @approximation.Coefficient.ToString("G6") · n<br />
-            R² = @approximation.R2.ToString("F4")
+            T(n) ≈ @Approximation.Coefficient.ToString("G6") · n<br />
+            R² = @Approximation.R2.ToString("F4")
         </div>
 
         <div class="alert alert-secondary">
@@ -200,23 +173,24 @@
     </div>
 }
 
+<CachePromptDialog Show="ShowCachePrompt" Experiment="CachedExperiment"
+                   OnUseCache="UseCachedResult" OnRecalculate="ForceRecalculate" />
 
 @code {
+    protected override string AlgorithmSlug => "bfs";
+    protected override string AlgorithmName => "Обход в ширину (BFS)";
+    protected override string AlgorithmComplexity => "O(V+E)";
+    protected override ComplexityType ComplexityType => ComplexityType.Linear;
 
-    private const int Runs = 5;
+    protected override int MaxN { get; set; } = 5000;
+    protected override int Step { get; set; } = 200;
 
     // ── Дерево (динамическое) ────────────────────────────────
-
-    // nodeParent[i] = родитель узла i (-1 для корня)
     List<int> nodeParent = new() { -1, 0, 0, 1, 1, 1, 3, 5, 5 };
     int addParent = 0;
 
     List<int> GetChildren(int node) =>
-        nodeParent
-            .Select((p, i) => (p, i))
-            .Where(x => x.p == node)
-            .Select(x => x.i)
-            .ToList();
+        nodeParent.Select((p, i) => (p, i)).Where(x => x.p == node).Select(x => x.i).ToList();
 
     void AddNode()
     {
@@ -233,9 +207,7 @@
         VizReset();
     }
 
-
-    // ── Автоматический layout дерева ─────────────────────────
-
+    // ── Layout ───────────────────────────────────────────────
     Dictionary<int, (double X, double Y)> nodePos = new();
     double svgWidth = 700;
     double svgHeight = 380;
@@ -249,24 +221,17 @@
     void ComputeLayout()
     {
         nodePos.Clear();
-
         int n = nodeParent.Count;
         double xGap = 60;
         double yGap = 90;
 
-        // вычисляем размер поддерева для каждого узла
         var size = new int[n];
         for (int i = 0; i < n; i++) size[i] = 1;
+        for (int i = n - 1; i >= 1; i--) size[nodeParent[i]] += size[i];
 
-        // идём снизу вверх (постпорядок)
-        for (int i = n - 1; i >= 1; i--)
-            size[nodeParent[i]] += size[i];
-
-        // Назначаем X через обход в ширину, распределяя листья равномерно
         var xOffset = new double[n];
         double curX = 40;
 
-        // DFS для назначения позиций листьев
         void Dfs(int node, int depth)
         {
             var children = GetChildren(node);
@@ -277,12 +242,10 @@
                 return;
             }
             foreach (int c in children) Dfs(c, depth + 1);
-            // центр над детьми
             xOffset[node] = (xOffset[children[0]] + xOffset[children[^1]]) / 2;
         }
         Dfs(0, 0);
 
-        // глубины через BFS
         var depth = new int[n];
         var queue = new Queue<int>();
         queue.Enqueue(0);
@@ -304,9 +267,7 @@
             nodePos[i] = (xOffset[i], 40 + depth[i] * yGap);
     }
 
-
-    // ── Визуализация BFS ─────────────────────────────────────
-
+    // ── Визуализация ─────────────────────────────────────────
     List<int> vizQueue = new();
     HashSet<int> vizInQueue = new();
     HashSet<int> vizVisited = new();
@@ -344,8 +305,7 @@
                 vizInQueue.Add(nb);
             }
         }
-        // BFS по рёбрам родитель → ребёнок только вниз,
-        // но дерево неориентированное — учитываем и ребро вверх
+
         int par = node < nodeParent.Count ? nodeParent[node] : -1;
         if (par >= 0 && !vizVisited.Contains(par) && !vizInQueue.Contains(par))
         {
@@ -384,7 +344,6 @@
         var sb = new System.Text.StringBuilder();
         sb.Append($"<svg viewBox=\"0 0 {svgWidth.ToString(System.Globalization.CultureInfo.InvariantCulture)} {svgHeight.ToString(System.Globalization.CultureInfo.InvariantCulture)}\" style=\"width:100%;display:block\">");
 
-        // рёбра
         for (int i = 1; i < nodeParent.Count; i++)
         {
             int p = nodeParent[i];
@@ -395,7 +354,6 @@
             sb.Append($"<line x1=\"{F(x1)}\" y1=\"{F(y1)}\" x2=\"{F(x2)}\" y2=\"{F(y2)}\" stroke=\"{stroke}\" stroke-width=\"2\"/>");
         }
 
-        // узлы
         for (int i = 0; i < nodeParent.Count; i++)
         {
             var (cx, cy) = nodePos[i];
@@ -411,93 +369,41 @@
             v.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-
     // ── Бенчмарк ─────────────────────────────────────────────
-
-    int maxN = 5000;
-    int benchStep = 200;
-    bool benchRunning = false;
-    string saved = "";
-    string benchError = "";
-    int currentBenchN = 0;
-    double progress = 0;
-
-    List<BenchmarkPoint> benchPoints = new();
-    ApproximationResult approximation = new();
-
-    string ProgressStyle =>
-        $"width:{progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}%;";
-
-    async Task RunBenchmark()
+    protected override async Task<List<BenchmarkPoint>> RunExperimentLogicAsync(
+        int maxN, int step, int runs, Action<int, int, double> updateProgress)
     {
-        if (benchRunning) return;
-
-        benchRunning = true;
-        saved = "";
-        benchError = "";
-        benchPoints.Clear();
-        approximation = new();
-        progress = 0;
-
+        var points = new List<BenchmarkPoint>();
         var rng = new Random();
-        var sizes = BuildSizes(maxN, benchStep);
+
+        // BFS строит размеры, начиная с step, а не с 1
+        var sizes = new List<int>();
+        for (int n = step; n <= maxN; n += step) sizes.Add(n);
+        if (sizes.Count == 0 || sizes[^1] != maxN) sizes.Add(maxN);
+
         int completed = 0;
 
-        try
+        foreach (int n in sizes)
         {
-            foreach (int n in sizes)
+            var adj = BuildGraph(n, rng);
+
+            double total = 0;
+            for (int r = 1; r <= runs; r++)
             {
-                currentBenchN = n;
-                var adj = BuildGraph(n, rng);
+                var sw = Stopwatch.StartNew();
+                BfsAlgo(adj, n);
+                sw.Stop();
+                total += sw.Elapsed.TotalMilliseconds;
 
-                double total = 0;
-                for (int r = 0; r < Runs; r++)
-                {
-                    var sw = Stopwatch.StartNew();
-                    BfsAlgo(adj, n);
-                    sw.Stop();
-                    total += sw.Elapsed.TotalMilliseconds;
-                }
-
-                benchPoints.Add(new BenchmarkPoint
-                {
-                    N = n,
-                    TimeMs = total / Runs
-                });
-
-                completed++;
-                progress = (double)completed / sizes.Count * 100;
-                StateHasChanged();
+                double progress = (completed + (double)r / runs) * 100 / sizes.Count;
+                updateProgress(n, r, progress);
                 await Task.Yield();
             }
 
-            approximation = ApproximationService.Fit(benchPoints, ComplexityType.Linear);
-
-            await SaveService.SaveAsync(
-                "bfs", "Обход в ширину (BFS)", "O(V+E)",
-                maxN, benchStep, Runs,
-                benchPoints, approximation);
-
-            saved = "Эксперимент сохранён.";
+            points.Add(new BenchmarkPoint { N = n, TimeMs = total / runs });
+            completed++;
         }
-        catch (Exception ex)
-        {
-            benchError = ex.Message;
-        }
-        finally
-        {
-            progress = 100;
-            benchRunning = false;
-            currentBenchN = 0;
-        }
-    }
-
-    static List<int> BuildSizes(int max, int step)
-    {
-        var result = new List<int>();
-        for (int n = step; n <= max; n += step) result.Add(n);
-        if (result.Count == 0 || result[^1] != max) result.Add(max);
-        return result;
+        return points;
     }
 
     static List<List<int>> BuildGraph(int n, Random rng)

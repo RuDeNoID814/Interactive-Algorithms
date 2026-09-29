@@ -1,12 +1,8 @@
 ﻿@using System.Diagnostics
-@inject ExperimentSaveService SaveService
+@inherits AlgorithmExperimentBase
 
 <h3>Задача коммивояжёра (TSP)</h3>
-
-<p>
-    Точное решение задачи поиска кратчайшего замкнутого маршрута
-    через все города методом полного перебора.
-</p>
+<p>Точное решение задачи поиска кратчайшего замкнутого маршрута через все города методом полного перебора.</p>
 
 <div class="alert alert-info">
     <strong>Метод:</strong> полный перебор перестановок<br />
@@ -17,77 +13,67 @@
 <hr />
 
 <div class="row">
-
     <div class="col-md-4 mb-3">
         <label>Минимальное n</label>
-        <input type="number" min="2" class="form-control"
-               @bind="minN" disabled="@running" />
+        <input type="number" min="2" class="form-control" @bind="MinN" disabled="@Running" />
     </div>
-
     <div class="col-md-4 mb-3">
         <label>Максимальное n</label>
-        <input type="number" min="2" class="form-control"
-               @bind="maxN" disabled="@running" />
+        <input type="number" min="2" class="form-control" @bind="MaxN" disabled="@Running" />
     </div>
-
     <div class="col-md-4 mb-3">
         <label>Запусков</label>
         <input class="form-control" value="@Runs" disabled />
     </div>
-
 </div>
 
-@if (maxN >= 11)
+@if (MaxN >= 11)
 {
     <div class="alert alert-warning">
-        Факториальный рост: при n=11 один запуск проверяет
-        10! = 3 628 800 маршрутов.
+        Факториальный рост: при n=11 один запуск проверяет 10! = 3 628 800 маршрутов.
     </div>
 }
 
-@if (maxN >= 13)
+@if (MaxN >= 13)
 {
     <div class="alert alert-danger">
-        При n=13 количество вариантов достигает
-        12! = 479 001 600. Жёсткого ограничения нет,
-        но выполнение может быть очень долгим.
+        При n=13 количество вариантов достигает 12! = 479 001 600. Жёсткого ограничения нет, но выполнение может быть очень долгим.
     </div>
 }
 
-@if (!string.IsNullOrEmpty(error))
+@if (!string.IsNullOrEmpty(Error))
 {
-    <div class="alert alert-danger">@error</div>
+    <div class="alert alert-danger">@Error</div>
 }
 
-<button class="btn btn-success"
-        @onclick="Run"
-        disabled="@running">
-    @(running ? "Выполняется..." : "Запустить эксперимент")
+<button class="btn btn-success" @onclick="OnRunClicked" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить эксперимент")
 </button>
 
-@if (running)
+@if (Running)
 {
     <div class="mt-4">
-
-        n = @currentN,
-        запуск @currentRun из @Runs
-
+        n = @CurrentN, запуск @CurrentRun из @Runs
         <div class="progress mt-2" style="height:25px">
-            <div class="progress-bar progress-bar-striped progress-bar-animated"
-                 style="@ProgressStyle">
-                @progress.ToString("F0")%
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="@ProgressStyle">
+                @Progress.ToString("F0")%
             </div>
         </div>
-
     </div>
 }
 
-@if (points.Count > 0)
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-success mt-3">
+        @Saved <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (Points.Count > 0)
 {
     <div class="mt-5">
-
-        <ComplexityChart Experimental="@points"
-                         Approximation="@approximation.Points"
+        <ComplexityChart Experimental="@Points"
+                         Approximation="@Approximation.Points"
                          Title="TSP — факториальный рост времени"
                          ApproximationName="Аппроксимация C·(n−1)!"
                          XAxisTitle="Количество городов n"
@@ -95,35 +81,27 @@
                          Height="520" />
 
         <div class="alert alert-light border mt-4">
-            T(n) ≈
-            @approximation.Coefficient.ToString("G6")
-            · (n−1)!<br />
-            R² = @approximation.R2.ToString("F4")
+            T(n) ≈ @Approximation.Coefficient.ToString("G6") · (n−1)!<br />
+            R² = @Approximation.R2.ToString("F4")
         </div>
 
         @if (bestRoute.Count > 0)
         {
             <div class="alert alert-success">
-
                 <strong>Лучший маршрут последнего запуска:</strong><br />
-
                 @string.Join(" → ", bestRoute)
-
                 <br /><br />
-
-                Длина:
-                <strong>@bestDistance.ToString("F3")</strong>
-
+                Длина: <strong>@bestDistance.ToString("F3")</strong>
             </div>
         }
     </div>
 }
 
+<CachePromptDialog Show="ShowCachePrompt" Experiment="CachedExperiment"
+                   OnUseCache="UseCachedResult" OnRecalculate="ForceRecalculate" />
+
 @code {
-    private sealed record City(
-        int Id,
-        double X,
-        double Y);
+    private sealed record City(int Id, double X, double Y);
 
     private sealed class TspResult
     {
@@ -131,134 +109,75 @@
         public List<int> Route { get; init; } = new();
     }
 
-    private const int Runs = 5;
+    protected override string AlgorithmSlug => "tsp";
+    protected override string AlgorithmName => "Задача коммивояжёра";
+    protected override string AlgorithmComplexity => "O(n!)";
+    protected override ComplexityType ComplexityType => ComplexityType.Factorial;
 
-    private int minN = 3;
-    private int maxN = 9;
+    protected override int MaxN { get; set; } = 9;
+    protected override int Step { get; set; } = 1;
 
-    private int currentN;
-    private int currentRun;
-
-    private double progress;
-    private bool running;
-
-    private string error = "";
-
-    private List<BenchmarkPoint> points = new();
-
-    private ApproximationResult approximation = new();
+    private int MinN { get; set; } = 3;
 
     private List<int> bestRoute = new();
     private double bestDistance;
 
-    private async Task Run()
-    {
-        if (running) return;
+    protected override ApproximationResult ComputeApproximation(List<BenchmarkPoint> points)
+        => BuildTspApproximation(points);
 
-        if (minN < 2 || maxN < minN)
+    protected override async Task<List<BenchmarkPoint>> RunExperimentLogicAsync(
+        int maxN, int step, int runs, Action<int, int, double> updateProgress)
+    {
+        if (MinN < 2 || maxN < MinN)
         {
-            error = "Проверьте диапазон n.";
-            return;
+            Error = "Проверьте диапазон n.";
+            return new List<BenchmarkPoint>();
         }
 
-        running = true;
-        error = "";
-        points.Clear();
-
+        var points = new List<BenchmarkPoint>();
         var random = new Random();
-
-        int count = maxN - minN + 1;
+        int count = maxN - MinN + 1;
         int completed = 0;
 
-        try
+        for (int n = MinN; n <= maxN; n++)
         {
-            for (int n = minN; n <= maxN; n++)
+            double total = 0;
+
+            for (int run = 1; run <= runs; run++)
             {
-                currentN = n;
+                var cities = Enumerable.Range(0, n)
+                    .Select(i => new City(i, random.NextDouble() * 1000, random.NextDouble() * 1000))
+                    .ToList();
 
-                double total = 0;
+                var sw = Stopwatch.StartNew();
+                var result = Solve(cities);
+                sw.Stop();
 
-                for (int run = 1; run <= Runs; run++)
-                {
-                    currentRun = run;
+                total += sw.Elapsed.TotalMilliseconds;
+                bestRoute = result.Route;
+                bestDistance = result.Distance;
 
-                    var cities = Enumerable
-                        .Range(0, n)
-                        .Select(i => new City(
-                            i,
-                            random.NextDouble() * 1000,
-                            random.NextDouble() * 1000))
-                        .ToList();
-
-                    var sw = Stopwatch.StartNew();
-                    var result = Solve(cities);
-                    sw.Stop();
-
-                    total += sw.Elapsed.TotalMilliseconds;
-
-                    bestRoute = result.Route;
-                    bestDistance = result.Distance;
-
-                    progress =
-                        (completed + (double)run / Runs)
-                        * 100 / count;
-
-                    StateHasChanged();
-                    await Task.Yield();
-                }
-
-                points.Add(new BenchmarkPoint
-                {
-                    N = n,
-                    TimeMs = total / Runs
-                });
-
-                completed++;
+                double progress = (completed + (double)run / runs) * 100 / count;
+                updateProgress(n, run, progress);
+                await Task.Yield();
             }
 
-            approximation =
-                BuildTspApproximation(points);
-
-            await SaveService.SaveAsync(
-                "tsp",
-                "Задача коммивояжёра",
-                "O(n!)",
-                maxN,
-                1,
-                Runs,
-                points,
-                approximation);
+            points.Add(new BenchmarkPoint { N = n, TimeMs = total / runs });
+            completed++;
         }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
-        finally
-        {
-            progress = 100;
-            running = false;
-        }
+        return points;
     }
 
-    private static TspResult Solve(
-        IReadOnlyList<City> cities)
+    private static TspResult Solve(IReadOnlyList<City> cities)
     {
-        int[] p = Enumerable
-            .Range(1, cities.Count - 1)
-            .ToArray();
-
+        int[] p = Enumerable.Range(1, cities.Count - 1).ToArray();
         double best = double.PositiveInfinity;
         int[] bestP = Array.Empty<int>();
 
         do
         {
             double d = RouteDistance(cities, p);
-
-            if (d < best)
-            {
-                best = d;
-                bestP = (int[])p.Clone();
-            }
+            if (d < best) { best = d; bestP = (int[])p.Clone(); }
         }
         while (NextPermutation(p));
 
@@ -266,33 +185,19 @@
         route.AddRange(bestP);
         route.Add(0);
 
-        return new TspResult
-        {
-            Distance = best,
-            Route = route
-        };
+        return new TspResult { Distance = best, Route = route };
     }
 
-    private static double RouteDistance(
-        IReadOnlyList<City> cities,
-        int[] p)
+    private static double RouteDistance(IReadOnlyList<City> cities, int[] p)
     {
         double sum = 0;
         int previous = 0;
-
         foreach (int current in p)
         {
-            sum += Distance(
-                cities[previous],
-                cities[current]);
-
+            sum += Distance(cities[previous], cities[current]);
             previous = current;
         }
-
-        sum += Distance(
-            cities[previous],
-            cities[0]);
-
+        sum += Distance(cities[previous], cities[0]);
         return sum;
     }
 
@@ -300,76 +205,51 @@
     {
         double dx = a.X - b.X;
         double dy = a.Y - b.Y;
-
         return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private static bool NextPermutation(int[] a)
     {
         int i = a.Length - 2;
-
-        while (i >= 0 && a[i] >= a[i + 1])
-            i--;
-
-        if (i < 0)
-            return false;
+        while (i >= 0 && a[i] >= a[i + 1]) i--;
+        if (i < 0) return false;
 
         int j = a.Length - 1;
-
-        while (a[j] <= a[i])
-            j--;
-
+        while (a[j] <= a[i]) j--;
         (a[i], a[j]) = (a[j], a[i]);
 
-        Array.Reverse(
-            a,
-            i + 1,
-            a.Length - i - 1);
-
+        Array.Reverse(a, i + 1, a.Length - i - 1);
         return true;
     }
 
-    private static ApproximationResult BuildTspApproximation(
-        IReadOnlyList<BenchmarkPoint> input)
+    private static ApproximationResult BuildTspApproximation(IReadOnlyList<BenchmarkPoint> input)
     {
-        double num = 0;
-        double den = 0;
-
+        double num = 0, den = 0;
         foreach (var p in input)
         {
             double f = Factorial(p.N - 1);
-
             num += p.TimeMs * f;
             den += f * f;
         }
 
         double c = den == 0 ? 0 : num / den;
 
-        var theory = input
-            .Select(p => new BenchmarkPoint
-            {
-                N = p.N,
-                TimeMs = c * Factorial(p.N - 1)
-            })
-            .ToList();
+        var theory = input.Select(p => new BenchmarkPoint
+        {
+            N = p.N,
+            TimeMs = c * Factorial(p.N - 1)
+        }).ToList();
 
         double mean = input.Average(p => p.TimeMs);
-        double total = 0;
-        double residual = 0;
+        double total = 0, residual = 0;
 
         for (int i = 0; i < input.Count; i++)
         {
-            total += Math.Pow(
-                input[i].TimeMs - mean, 2);
-
-            residual += Math.Pow(
-                input[i].TimeMs - theory[i].TimeMs, 2);
+            total += Math.Pow(input[i].TimeMs - mean, 2);
+            residual += Math.Pow(input[i].TimeMs - theory[i].TimeMs, 2);
         }
 
-        double r2 =
-            total == 0
-                ? 1
-                : 1 - residual / total;
+        double r2 = total == 0 ? 1 : 1 - residual / total;
 
         return new ApproximationResult
         {
@@ -382,14 +262,7 @@
     private static double Factorial(int n)
     {
         double result = 1;
-
-        for (int i = 2; i <= n; i++)
-            result *= i;
-
+        for (int i = 2; i <= n; i++) result *= i;
         return result;
     }
-
-    private string ProgressStyle =>
-        $"width:{progress.ToString("F1",
-            System.Globalization.CultureInfo.InvariantCulture)}%;";
 }

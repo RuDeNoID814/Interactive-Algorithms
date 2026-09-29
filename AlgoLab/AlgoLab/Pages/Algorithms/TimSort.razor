@@ -1,13 +1,8 @@
 ﻿@using System.Diagnostics
-@inject ExperimentSaveService SaveService
+@inherits AlgorithmExperimentBase
 
 <h3>TimSort</h3>
-
-<p>
-    Учебная реализация гибридной сортировки:
-    небольшие серии сортируются вставками,
-    после чего объединяются слиянием.
-</p>
+<p>Учебная реализация гибридной сортировки: небольшие серии сортируются вставками, после чего объединяются слиянием.</p>
 
 <div class="alert alert-info">
     <strong>Средний:</strong> O(n log n)<br />
@@ -16,70 +11,59 @@
 </div>
 
 <hr />
-
 <h3>Экспериментальный анализ</h3>
 
 <div class="row">
     <div class="col-md-4 mb-3">
         <label>Максимальное n</label>
-        <input type="number" min="1" class="form-control"
-               @bind="maxN" disabled="@running" />
+        <input type="number" min="1" class="form-control" @bind="MaxN" disabled="@Running" />
     </div>
-
     <div class="col-md-4 mb-3">
         <label>Шаг</label>
-        <input type="number" min="1" class="form-control"
-               @bind="step" disabled="@running" />
+        <input type="number" min="1" class="form-control" @bind="Step" disabled="@Running" />
     </div>
-
     <div class="col-md-4 mb-3">
         <label>Запусков</label>
         <input class="form-control" value="@Runs" disabled />
     </div>
 </div>
 
-@if (!string.IsNullOrEmpty(error))
+@if (!string.IsNullOrEmpty(Error))
 {
-    <div class="alert alert-danger">@error</div>
+    <div class="alert alert-danger">@Error</div>
 }
 
-<button class="btn btn-success"
-        @onclick="Run"
-        disabled="@running">
-    @(running ? "Выполняется..." : "Запустить эксперимент")
+<button class="btn btn-success" @onclick="OnRunClicked" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить эксперимент")
 </button>
 
-@if (running)
+@if (Running)
 {
     <div class="mt-4">
         <div class="d-flex justify-content-between">
-            <span>n = @currentN, запуск @currentRun из @Runs</span>
-            <strong>@progress.ToString("F1")%</strong>
+            <span>n = @CurrentN, запуск @CurrentRun из @Runs</span>
+            <strong>@Progress.ToString("F1")%</strong>
         </div>
-
         <div class="progress mt-2" style="height:25px">
-            <div class="progress-bar progress-bar-striped progress-bar-animated"
-                 style="@ProgressStyle">
-                @progress.ToString("F0")%
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="@ProgressStyle">
+                @Progress.ToString("F0")%
             </div>
         </div>
     </div>
 }
 
-@if (!string.IsNullOrEmpty(saved))
+@if (!string.IsNullOrEmpty(Saved))
 {
     <div class="alert alert-success mt-3">
-        @saved
-        <a href="/history" class="alert-link ms-2">История</a>
+        @Saved <a href="/history" class="alert-link ms-2">История</a>
     </div>
 }
 
-@if (points.Count > 0)
+@if (Points.Count > 0)
 {
     <div class="mt-5">
-
-        <ComplexityChart Experimental="@points"
-                         Approximation="@approximation.Points"
+        <ComplexityChart Experimental="@Points"
+                         Approximation="@Approximation.Points"
                          Title="TimSort — временная сложность"
                          ApproximationName="Аппроксимация C·n·log₂(n)"
                          XAxisTitle="Размер массива n"
@@ -87,130 +71,62 @@
                          Height="520" />
 
         <div class="alert alert-light border mt-4">
-            T(n) ≈
-            @approximation.Coefficient.ToString("G6")
-            · n · log₂(n)<br />
-            R² = @approximation.R2.ToString("F4")
+            T(n) ≈ @Approximation.Coefficient.ToString("G6") · n · log₂(n)<br />
+            R² = @Approximation.R2.ToString("F4")
         </div>
     </div>
 }
 
+<CachePromptDialog Show="ShowCachePrompt" Experiment="CachedExperiment"
+                   OnUseCache="UseCachedResult" OnRecalculate="ForceRecalculate" />
+
 @code {
-    private const int Runs = 5;
     private const int RunSize = 32;
 
-    private int maxN = 2000;
-    private int step = 50;
+    protected override string AlgorithmSlug => "timsort";
+    protected override string AlgorithmName => "TimSort";
+    protected override string AlgorithmComplexity => "O(n log n)";
+    protected override ComplexityType ComplexityType => ComplexityType.Linearithmic;
 
-    private int currentN;
-    private int currentRun;
-    private double progress;
-    private bool running;
-
-    private string error = "";
-    private string saved = "";
-
-    private List<BenchmarkPoint> points = new();
-    private ApproximationResult approximation = new();
-
-    private async Task Run()
+    protected override async Task<List<BenchmarkPoint>> RunExperimentLogicAsync(
+        int maxN, int step, int runs, Action<int, int, double> updateProgress)
     {
-        if (running) return;
-
-        error = "";
-        saved = "";
-
-        if (maxN < 1 || step < 1)
-        {
-            error = "n и шаг должны быть больше нуля.";
-            return;
-        }
-
-        running = true;
-        points.Clear();
-
+        var points = new List<BenchmarkPoint>();
         var sizes = BuildSizes(maxN, step);
         var random = new Random();
         int completed = 0;
 
-        try
+        foreach (int n in sizes)
         {
-            foreach (int n in sizes)
+            var original = new int[n];
+            for (int i = 0; i < n; i++) original[i] = random.Next(100_000);
+
+            double total = 0;
+
+            for (int run = 1; run <= runs; run++)
             {
-                currentN = n;
+                var data = (int[])original.Clone();
+                var sw = Stopwatch.StartNew();
+                Sort(data);
+                sw.Stop();
 
-                var original = new int[n];
-
-                for (int i = 0; i < n; i++)
-                    original[i] = random.Next(100_000);
-
-                double total = 0;
-
-                for (int run = 1; run <= Runs; run++)
-                {
-                    currentRun = run;
-
-                    var data = (int[])original.Clone();
-
-                    var sw = Stopwatch.StartNew();
-                    Sort(data);
-                    sw.Stop();
-
-                    total += sw.Elapsed.TotalMilliseconds;
-
-                    progress =
-                        (completed + (double)run / Runs)
-                        * 100 / sizes.Count;
-
-                    StateHasChanged();
-                    await Task.Yield();
-                }
-
-                points.Add(new BenchmarkPoint
-                {
-                    N = n,
-                    TimeMs = total / Runs
-                });
-
-                completed++;
+                total += sw.Elapsed.TotalMilliseconds;
+                double progress = (completed + (double)run / runs) * 100 / sizes.Count;
+                updateProgress(n, run, progress);
+                await Task.Yield();
             }
 
-            approximation = ApproximationService.Fit(
-                points,
-                ComplexityType.Linearithmic);
-
-            await SaveService.SaveAsync(
-                "timsort",
-                "TimSort",
-                "O(n log n)",
-                maxN,
-                step,
-                Runs,
-                points,
-                approximation);
-
-            saved = "Эксперимент сохранён.";
+            points.Add(new BenchmarkPoint { N = n, TimeMs = total / runs });
+            completed++;
         }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
-        finally
-        {
-            progress = 100;
-            running = false;
-        }
+        return points;
     }
 
     private static void Sort(int[] data)
     {
         int n = data.Length;
-
         for (int start = 0; start < n; start += RunSize)
-            InsertionSort(
-                data,
-                start,
-                Math.Min(start + RunSize - 1, n - 1));
+            InsertionSort(data, start, Math.Min(start + RunSize - 1, n - 1));
 
         for (int size = RunSize; size < n; size *= 2)
         {
@@ -218,68 +134,34 @@
             {
                 int middle = Math.Min(left + size - 1, n - 1);
                 int right = Math.Min(left + 2 * size - 1, n - 1);
-
-                if (middle < right)
-                    Merge(data, left, middle, right);
+                if (middle < right) Merge(data, left, middle, right);
             }
         }
     }
 
-    private static void InsertionSort(
-        int[] data,
-        int left,
-        int right)
+    private static void InsertionSort(int[] data, int left, int right)
     {
         for (int i = left + 1; i <= right; i++)
         {
             int value = data[i];
             int j = i - 1;
-
             while (j >= left && data[j] > value)
             {
                 data[j + 1] = data[j];
                 j--;
             }
-
             data[j + 1] = value;
         }
     }
 
-    private static void Merge(
-        int[] data,
-        int left,
-        int middle,
-        int right)
+    private static void Merge(int[] data, int left, int middle, int right)
     {
         int[] a = data[left..(middle + 1)];
         int[] b = data[(middle + 1)..(right + 1)];
-
         int i = 0, j = 0, k = left;
-
         while (i < a.Length && j < b.Length)
             data[k++] = a[i] <= b[j] ? a[i++] : b[j++];
-
-        while (i < a.Length)
-            data[k++] = a[i++];
-
-        while (j < b.Length)
-            data[k++] = b[j++];
+        while (i < a.Length) data[k++] = a[i++];
+        while (j < b.Length) data[k++] = b[j++];
     }
-
-    private static List<int> BuildSizes(int max, int step)
-    {
-        var result = new List<int>();
-
-        for (int n = 1; n <= max; n += step)
-            result.Add(n);
-
-        if (result.Count == 0 || result[^1] != max)
-            result.Add(max);
-
-        return result;
-    }
-
-    private string ProgressStyle =>
-        $"width:{progress.ToString("F1",
-            System.Globalization.CultureInfo.InvariantCulture)}%;";
 }

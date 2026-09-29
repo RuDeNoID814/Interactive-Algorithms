@@ -1,1019 +1,265 @@
 ﻿@using System.Diagnostics
 @using Microsoft.JSInterop
+@inherits AlgorithmExperimentBase
 
-@inject ExperimentSaveService SaveService
 @inject IJSRuntime JS
 
-
-<h3>
-    Классическое умножение матриц
-</h3>
-
-<p>
-    Для двух квадратных матриц A и B размера n×n
-    вычисляется произведение C = A × B.
-</p>
-
+<h3>Классическое умножение матриц</h3>
+<p>Для двух квадратных матриц A и B размера n×n вычисляется произведение C = A × B.</p>
 
 <div class="alert alert-info">
-
-    <strong>
-        Временная сложность:
-    </strong>
-
-    O(n³)
-
-    <br />
-
-    <strong>
-        Дополнительная память:
-    </strong>
-
-    O(n²)
-
-    <br />
-
-    <strong>
-        Структура алгоритма:
-    </strong>
-
-    три вложенных цикла
-
+    <strong>Временная сложность:</strong> O(n³)<br />
+    <strong>Дополнительная память:</strong> O(n²)<br />
+    <strong>Структура алгоритма:</strong> три вложенных цикла
 </div>
-
 
 <hr />
+<h3>Экспериментальный анализ</h3>
 
-
-<h3>
-    Экспериментальный анализ
-</h3>
-
-
-<p>
-    Для каждого размера генерируются две случайные матрицы.
-    Алгоритм запускается пять раз.
-</p>
-
+<p>Для каждого размера генерируются две случайные матрицы. Алгоритм запускается пять раз.</p>
 
 <div class="row">
-
-
     <div class="col-md-4 mb-3">
-
-        <label>
-            Максимальное n
-        </label>
-
-        <input type="number"
-               min="1"
-               class="form-control"
-               @bind="maxN"
-               disabled="@running" />
-
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control" @bind="MaxN" disabled="@Running" />
     </div>
-
-
     <div class="col-md-4 mb-3">
-
-        <label>
-            Шаг
-        </label>
-
-        <input type="number"
-               min="1"
-               class="form-control"
-               @bind="step"
-               disabled="@running" />
-
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control" @bind="Step" disabled="@Running" />
     </div>
-
-
     <div class="col-md-4 mb-3">
-
-        <label>
-            Запусков
-        </label>
-
-        <input class="form-control"
-               value="@Runs"
-               disabled />
-
+        <label>Запусков</label>
+        <input class="form-control" value="@Runs" disabled />
     </div>
-
-
 </div>
 
-
-@if (maxN >= 500)
+@if (MaxN >= 500)
 {
     <div class="alert alert-warning">
-
-        <strong>
-            Предупреждение.
-        </strong>
-
-        Алгоритм имеет сложность O(n³).
-        Большие матрицы могут выполняться
-        продолжительное время.
-
-        Верхнего программного ограничения нет.
-
+        <strong>Предупреждение.</strong> Алгоритм имеет сложность O(n³). Большие матрицы могут выполняться продолжительное время.
     </div>
 }
 
-
-@if (!string.IsNullOrWhiteSpace(error))
+@if (!string.IsNullOrWhiteSpace(Error))
 {
-    <div class="alert alert-danger">
-
-        @error
-
-    </div>
+    <div class="alert alert-danger">@Error</div>
 }
 
-
-<button class="btn btn-success"
-        @onclick="Run"
-        disabled="@running">
-
-    @(running
-        ? "Эксперимент выполняется..."
-        : "Запустить эксперимент")
-
+<button class="btn btn-success" @onclick="OnRunClicked" disabled="@Running">
+    @(Running ? "Эксперимент выполняется..." : "Запустить эксперимент")
 </button>
 
-
-@if (running)
+@if (Running)
 {
     <div class="mt-4">
-
-
-        <div class="
-            d-flex
-            justify-content-between">
-
-            <span>
-
-                n =
-                <strong>
-                    @currentN
-                </strong>,
-
-                запуск
-
-                <strong>
-                    @currentRun
-                </strong>
-
-                из @Runs
-
-            </span>
-
-
-            <strong>
-
-                @(progress.ToString("F1"))%
-
-            </strong>
-
+        <div class="d-flex justify-content-between">
+            <span>n = <strong>@CurrentN</strong>, запуск <strong>@CurrentRun</strong> из @Runs</span>
+            <strong>@Progress.ToString("F1")%</strong>
         </div>
-
-
-        <div class="progress mt-2"
-             style="height:25px;">
-
-            <div class="
-                progress-bar
-                progress-bar-striped
-                progress-bar-animated"
-                 style="@ProgressStyle">
-
-                @(progress.ToString("F0"))%
-
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="@ProgressStyle">
+                @Progress.ToString("F0")%
             </div>
-
         </div>
-
-
     </div>
 }
 
-
-@if (!string.IsNullOrWhiteSpace(saved))
+@if (!string.IsNullOrWhiteSpace(Saved))
 {
-    <div class="
-        alert
-        alert-success
-        mt-3">
-
-        @saved
-
-        <a href="/history"
-           class="alert-link ms-2">
-
-            Открыть историю
-
-        </a>
-
+    <div class="alert alert-success mt-3">
+        @Saved <a href="/history" class="alert-link ms-2">Открыть историю</a>
     </div>
 }
 
-
-@if (averagePoints.Count > 0)
+@if (Points.Count > 0)
 {
     <div class="mt-5">
+        <h4>Среднее время выполнения</h4>
 
-
-        <!-- ===================================== -->
-        <!-- 2D                                  -->
-        <!-- ===================================== -->
-
-        <h4>
-            Среднее время выполнения
-        </h4>
-
-
-        <ComplexityChart Experimental="@averagePoints"
-                         Approximation="@approximation.Points"
+        <ComplexityChart Experimental="@Points"
+                         Approximation="@Approximation.Points"
                          Title="Умножение матриц — временная сложность"
                          ApproximationName="Аппроксимация C·n³"
                          XAxisTitle="Размер матрицы n"
                          YAxisTitle="Среднее время выполнения, мс"
                          Height="520" />
 
-
-        <div class="
-            alert
-            alert-light
-            border
-            mt-4">
-
-            <h5>
-                Аппроксимация
-            </h5>
-
-
-            <div style="
-                font-family:monospace;
-                font-size:1.15rem;">
-
-                T(n) ≈
-
-                @(approximation
-                    .Coefficient
-                    .ToString("G6"))
-
-                · n³
-
+        <div class="alert alert-light border mt-4">
+            <h5>Аппроксимация</h5>
+            <div style="font-family:monospace;font-size:1.15rem;">
+                T(n) ≈ @Approximation.Coefficient.ToString("G6") · n³
             </div>
-
-
             <div class="mt-2">
-
-                R² =
-
-                <strong>
-                    @(approximation
-                        .R2
-                        .ToString("F4"))
-                </strong>
-
+                R² = <strong>@Approximation.R2.ToString("F4")</strong>
             </div>
-
         </div>
 
-
-        <!-- ===================================== -->
-        <!-- 3D                                  -->
-        <!-- ===================================== -->
-
         <div class="mt-5">
-
-            <h4>
-                Трёхмерный график пяти запусков
-            </h4>
-
-
+            <h4>Трёхмерный график пяти запусков</h4>
             <p class="text-muted">
-
-                <strong>X:</strong>
-                размер матрицы n
-
-                <br />
-
-                <strong>Y:</strong>
-                номер запуска от 1 до 5
-
-                <br />
-
-                <strong>Z:</strong>
-                машинное время выполнения, мс
-
+                <strong>X:</strong> размер матрицы n<br />
+                <strong>Y:</strong> номер запуска от 1 до 5<br />
+                <strong>Z:</strong> машинное время выполнения, мс
             </p>
 
-
-            <div id="@plotId"
-                 style="
-                width:100%;
-                min-height:600px;
-                border:1px solid #e5e7eb;
-                border-radius:8px;">
-            </div>
-
+            <div id="@plotId" style="width:100%;min-height:600px;border:1px solid #e5e7eb;border-radius:8px;"></div>
 
             @if (!string.IsNullOrWhiteSpace(plotError))
             {
-                <div class="
-                    alert
-                    alert-warning
-                    mt-2">
-
-                    Ошибка 3D-графика:
-
-                    @plotError
-
-                </div>
+                <div class="alert alert-warning mt-2">Ошибка 3D-графика: @plotError</div>
             }
-
-
         </div>
 
-
-        <!-- ===================================== -->
-        <!-- THEORY                              -->
-        <!-- ===================================== -->
-
-        <div class="
-            alert
-            alert-secondary
-            mt-5">
-
-            <strong>
-                Теоретический анализ
-            </strong>
-
-
-            <p class="mt-2 mb-1">
-
-                Используются три вложенных цикла:
-
-            </p>
-
-
+        <div class="alert alert-secondary mt-5">
+            <strong>Теоретический анализ</strong>
+            <p class="mt-2 mb-1">Используются три вложенных цикла:</p>
             <code>
-
-                for i = 0..n-1
-
-                <br />
-
-                &nbsp;&nbsp;for j = 0..n-1
-
-                <br />
-
+                for i = 0..n-1<br />
+                &nbsp;&nbsp;for j = 0..n-1<br />
                 &nbsp;&nbsp;&nbsp;&nbsp;for k = 0..n-1
-
             </code>
-
-
-            <p class="mt-2 mb-0">
-
-                Следовательно:
-
-                <strong>
-                    T(n) = O(n³)
-                </strong>.
-
-            </p>
-
+            <p class="mt-2 mb-0">Следовательно: <strong>T(n) = O(n³)</strong>.</p>
         </div>
-
-
-        <!-- ===================================== -->
-        <!-- RUN TABLE                           -->
-        <!-- ===================================== -->
 
         <div class="mt-4">
-
-            <h4>
-                Последние отдельные замеры
-            </h4>
-
-
+            <h4>Последние отдельные замеры</h4>
             <div class="table-responsive">
-
-                <table class="
-                    table
-                    table-striped
-                    table-sm">
-
+                <table class="table table-striped table-sm">
                     <thead>
-
-                        <tr>
-
-                            <th>
-                                n
-                            </th>
-
-                            <th>
-                                Запуск
-                            </th>
-
-                            <th>
-                                Время, мс
-                            </th>
-
-                        </tr>
-
+                        <tr><th>n</th><th>Запуск</th><th>Время, мс</th></tr>
                     </thead>
-
-
                     <tbody>
-
-                        @foreach (var point
-                            in runPoints.TakeLast(
-                                Math.Min(
-                                    50,
-                                    runPoints.Count)))
+                        @foreach (var point in runPoints.TakeLast(Math.Min(50, runPoints.Count)))
                         {
                             <tr>
-
-                                <td>
-                                    @point.N
-                                </td>
-
-                                <td>
-                                    @point.Run
-                                </td>
-
-                                <td>
-                                    @(point
-                                        .TimeMs
-                                        .ToString("F6"))
-                                </td>
-
+                                <td>@point.N</td>
+                                <td>@point.Run</td>
+                                <td>@point.TimeMs.ToString("F6")</td>
                             </tr>
                         }
-
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
-
-
     </div>
 }
 
+<CachePromptDialog Show="ShowCachePrompt" Experiment="CachedExperiment"
+                   OnUseCache="UseCachedResult" OnRecalculate="ForceRecalculate" />
 
 @code {
+    protected override string AlgorithmSlug => "matrix";
+    protected override string AlgorithmName => "Умножение матриц";
+    protected override string AlgorithmComplexity => "O(n³)";
+    protected override ComplexityType ComplexityType => ComplexityType.Cubic;
 
-    // =====================================================
-    // SETTINGS
-    // =====================================================
+    protected override int MaxN { get; set; } = 200;
+    protected override int Step { get; set; } = 10;
 
-    private const int Runs =
-        5;
-
-
-    private int maxN =
-        200;
-
-
-    private int step =
-        10;
-
-
-    // =====================================================
-    // STATE
-    // =====================================================
-
-    private int currentN;
-
-    private int currentRun;
-
-
-    private double progress;
-
-
-    private bool running;
-
-
-    private string error =
-        "";
-
-
-    private string saved =
-        "";
-
-
-    private string plotError =
-        "";
-
-
-    // =====================================================
-    // DATA
-    // =====================================================
-
-    private List<BenchmarkPoint> averagePoints =
-        new();
-
-
-    private List<BenchmarkPoint> runPoints =
-        new();
-
-
-    private ApproximationResult approximation =
-        new();
-
-
-    // =====================================================
-    // 3D
-    // =====================================================
-
-    private readonly string plotId =
-        "matrix-3d-"
-        +
-        Guid.NewGuid()
-            .ToString("N");
-
-
-    // Этот флаг сообщает:
-    // "после следующего рендера надо построить Plotly".
-
+    private List<BenchmarkPoint> runPoints = new();
+    private string plotError = "";
+    private readonly string plotId = "matrix-3d-" + Guid.NewGuid().ToString("N");
     private bool draw3D;
 
+    protected override IReadOnlyList<BenchmarkPoint>? GetIndividualRuns() => runPoints;
 
-    // =====================================================
-    // RUN
-    // =====================================================
-
-    private async Task Run()
+    protected override void UseCachedResult()
     {
-        if (running)
-            return;
+        base.UseCachedResult();
+        if (CachedExperiment == null) return;
 
+        runPoints = CachedExperiment.Points
+            .Where(p => !p.IsAverage)
+            .Select(p => new BenchmarkPoint { N = p.N, Run = p.Run, TimeMs = p.TimeMs })
+            .ToList();
 
-        error =
-            "";
+        draw3D = true;
+        StateHasChanged();
+    }
 
-
-        saved =
-            "";
-
-
-        plotError =
-            "";
-
-
-        draw3D =
-            false;
-
-
-        if (maxN < 1 ||
-            step < 1)
-        {
-            error =
-                "n и шаг должны быть больше нуля.";
-
-            return;
-        }
-
-
-        running =
-            true;
-
-
-        averagePoints.Clear();
-
+    protected override async Task<List<BenchmarkPoint>> RunExperimentLogicAsync(
+        int maxN, int step, int runs, Action<int, int, double> updateProgress)
+    {
+        var averagePoints = new List<BenchmarkPoint>();
         runPoints.Clear();
 
+        var sizes = BuildSizes(maxN, step);
+        var random = new Random();
+        int completed = 0;
 
-        approximation =
-            new ApproximationResult();
-
-
-        progress =
-            0;
-
-
-        var sizes =
-            BuildSizes(
-                maxN,
-                step);
-
-
-        var random =
-            new Random();
-
-
-        int completed =
-            0;
-
-
-        try
+        foreach (int n in sizes)
         {
+            double[,] a = Generate(n, random);
+            double[,] b = Generate(n, random);
+            double total = 0;
 
-            foreach (int n in sizes)
+            for (int run = 1; run <= runs; run++)
             {
-                currentN =
-                    n;
+                var sw = Stopwatch.StartNew();
+                Multiply(a, b);
+                sw.Stop();
 
+                double time = sw.Elapsed.TotalMilliseconds;
+                total += time;
 
-                double[,] a =
-                    Generate(
-                        n,
-                        random);
+                runPoints.Add(new BenchmarkPoint { N = n, Run = run, TimeMs = time });
 
-
-                double[,] b =
-                    Generate(
-                        n,
-                        random);
-
-
-                double total =
-                    0;
-
-
-                for (int run = 1;
-                     run <= Runs;
-                     run++)
-                {
-                    currentRun =
-                        run;
-
-
-                    var sw =
-                        Stopwatch.StartNew();
-
-
-                    Multiply(
-                        a,
-                        b);
-
-
-                    sw.Stop();
-
-
-                    double time =
-                        sw.Elapsed
-                            .TotalMilliseconds;
-
-
-                    total +=
-                        time;
-
-
-                    runPoints.Add(
-                        new BenchmarkPoint
-                        {
-                            N =
-                                n,
-
-                            Run =
-                                run,
-
-                            TimeMs =
-                                time
-                        });
-
-
-                    progress =
-                        (completed
-                         +
-                         (double)run
-                         / Runs)
-                        *
-                        100
-                        /
-                        sizes.Count;
-
-
-                    StateHasChanged();
-
-                    await Task.Yield();
-                }
-
-
-                averagePoints.Add(
-                    new BenchmarkPoint
-                    {
-                        N =
-                            n,
-
-                        TimeMs =
-                            total
-                            / Runs
-                    });
-
-
-                completed++;
-
-
-                progress =
-                    completed
-                    * 100.0
-                    / sizes.Count;
-
-
-                StateHasChanged();
-
+                double progress = (completed + (double)run / runs) * 100 / sizes.Count;
+                updateProgress(n, run, progress);
                 await Task.Yield();
             }
 
-
-            averagePoints =
-                averagePoints
-                    .OrderBy(
-                        p => p.N)
-                    .ToList();
-
-
-            approximation =
-                ApproximationService.Fit(
-                    averagePoints,
-                    ComplexityType.Cubic);
-
-
-            progress =
-                100;
-
-
-            // =============================================
-            // ВАЖНО
-            // =============================================
-            //
-            // Не вызываем Plotly здесь.
-            //
-            // Сначала ставим флаг.
-            // Razor создаст div id=plotId.
-            // Потом OnAfterRenderAsync построит график.
-
-            draw3D =
-                true;
-
-
-            StateHasChanged();
-
-            await Task.Yield();
-
-
-            await SaveService.SaveAsync(
-                slug:
-                    "matrix",
-
-                name:
-                    "Умножение матриц",
-
-                complexity:
-                    "O(n³)",
-
-                maxN:
-                    maxN,
-
-                step:
-                    step,
-
-                runs:
-                    Runs,
-
-                points:
-                    averagePoints,
-
-                approximation:
-                    approximation,
-
-                individualRuns:
-                    runPoints);
-
-
-            saved =
-                "Эксперимент сохранён.";
+            averagePoints.Add(new BenchmarkPoint { N = n, TimeMs = total / runs });
+            completed++;
         }
-        catch (Exception ex)
-        {
-            error =
-                "Ошибка: "
-                + ex.Message;
-        }
-        finally
-        {
-            currentN =
-                0;
 
-
-            currentRun =
-                0;
-
-
-            running =
-                false;
-
-
-            StateHasChanged();
-        }
+        averagePoints = averagePoints.OrderBy(p => p.N).ToList();
+        draw3D = true;
+        return averagePoints;
     }
 
-
-    // =====================================================
-    // AFTER RENDER
-    // =====================================================
-
-    protected override async Task
-        OnAfterRenderAsync(
-            bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!draw3D)
-            return;
-
-
-        // Сразу выключаем флаг,
-        // иначе можем рисовать график
-        // после каждого следующего рендера.
-
-        draw3D =
-            false;
-
+        if (!draw3D) return;
+        draw3D = false;
 
         try
         {
-            var data =
-                runPoints
-                    .OrderBy(
-                        p => p.N)
-                    .ThenBy(
-                        p => p.Run)
-                    .Select(
-                        p => new
-                        {
-                            n =
-                                p.N,
+            var data = runPoints
+                .OrderBy(p => p.N)
+                .ThenBy(p => p.Run)
+                .Select(p => new { n = p.N, run = p.Run, timeMs = p.TimeMs })
+                .ToArray();
 
-                            run =
-                                p.Run,
-
-                            timeMs =
-                                p.TimeMs
-                        })
-                    .ToArray();
-
-
-            await JS.InvokeVoidAsync(
-                "algoLabPlotly.drawMatrix3D",
-                plotId,
-                data);
+            await JS.InvokeVoidAsync("algoLabPlotly.drawMatrix3D", plotId, data);
         }
         catch (Exception ex)
         {
-            plotError =
-                ex.Message;
-
-
+            plotError = ex.Message;
             StateHasChanged();
         }
     }
 
-
-    // =====================================================
-    // MATRIX GENERATOR
-    // =====================================================
-
-    private static double[,]
-        Generate(
-            int n,
-            Random random)
+    private static double[,] Generate(int n, Random random)
     {
-        var matrix =
-            new double[n, n];
-
-
-        for (int i = 0;
-             i < n;
-             i++)
-        {
-            for (int j = 0;
-                 j < n;
-                 j++)
-            {
-                matrix[i, j] =
-                    random.NextDouble()
-                    * 100;
-            }
-        }
-
-
+        var matrix = new double[n, n];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                matrix[i, j] = random.NextDouble() * 100;
         return matrix;
     }
 
-
-    // =====================================================
-    // O(n^3) MULTIPLICATION
-    // =====================================================
-
-    private static double[,]
-        Multiply(
-            double[,] a,
-            double[,] b)
+    private static double[,] Multiply(double[,] a, double[,] b)
     {
-        int n =
-            a.GetLength(0);
-
-
-        var c =
-            new double[n, n];
-
-
-        for (int i = 0;
-             i < n;
-             i++)
-        {
-            for (int j = 0;
-                 j < n;
-                 j++)
+        int n = a.GetLength(0);
+        var c = new double[n, n];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
             {
-                double sum =
-                    0;
-
-
-                for (int k = 0;
-                     k < n;
-                     k++)
-                {
-                    sum +=
-                        a[i, k]
-                        *
-                        b[k, j];
-                }
-
-
-                c[i, j] =
-                    sum;
+                double sum = 0;
+                for (int k = 0; k < n; k++) sum += a[i, k] * b[k, j];
+                c[i, j] = sum;
             }
-        }
-
-
         return c;
-    }
-
-
-    // =====================================================
-    // SIZES
-    // =====================================================
-
-    private static List<int>
-        BuildSizes(
-            int maximum,
-            int step)
-    {
-        var result =
-            new List<int>();
-
-
-        for (int n = 1;
-             n <= maximum;
-             n += step)
-        {
-            result.Add(
-                n);
-        }
-
-
-        // Гарантируем наличие
-        // пользовательского maxN.
-
-        if (result.Count == 0 ||
-            result[^1] != maximum)
-        {
-            result.Add(
-                maximum);
-        }
-
-
-        return result;
-    }
-
-
-    // =====================================================
-    // PROGRESS CSS
-    // =====================================================
-
-    private string ProgressStyle
-    {
-        get
-        {
-            string value =
-                progress.ToString(
-                    "F1",
-                    System.Globalization
-                        .CultureInfo
-                        .InvariantCulture);
-
-
-            return
-                $"width:{value}%;";
-        }
     }
 }
