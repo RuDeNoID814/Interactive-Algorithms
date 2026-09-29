@@ -22,3 +22,6 @@ out/
 *.db-shm
 *.db-wal
 .directory
+
+## Личные рабочие заметки, не для коммита
+private/
