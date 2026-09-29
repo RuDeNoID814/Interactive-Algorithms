@@ -1,462 +1,212 @@
 ﻿@using System.Diagnostics
-@using System.Numerics
+@inject ExperimentSaveService SaveService
 
-<div>
+<h3>Простое возведение в степень</h3>
 
-    <h3>Простое возведение в степень</h3>
+<p>
+    Простой итеративный алгоритм: значение <em>x</em> возводится
+    в степень <em>n</em> последовательным умножением в цикле
+    (ровно <em>n</em> умножений).
+</p>
 
-    <p>
-        Классический (наивный) алгоритм. Чтобы вычислить
-        <em>a<sup>n</sup></em>, основание умножается само на себя
-        ровно <em>n</em> раз.
-    </p>
-
-    <div class="alert alert-info">
-        <strong>Лучший случай:</strong> O(n)
-        <br />
-        <strong>Средний случай:</strong> O(n)
-        <br />
-        <strong>Худший случай:</strong> O(n)
-        <br />
-        <strong>Дополнительная память:</strong> O(1)
-    </div>
-
-    <!-- ====================================== -->
-    <!-- ВИЗУАЛИЗАЦИЯ                          -->
-    <!-- ====================================== -->
-
-    <h4 class="mt-4">Визуализация алгоритма</h4>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Основание a: <strong>@baseValue</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="2" max="9"
-               @bind="baseValue"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Показатель n: <strong>@exponent</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="1" max="64"
-               @bind="exponent"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Скорость анимации: <strong>@GetSpeedText()</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="1" max="5"
-               @bind="animationSpeed"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="d-flex gap-2 mb-4">
-        <button class="btn btn-secondary"
-                @onclick="Reset"
-                disabled="@isRunning">
-            Сброс
-        </button>
-        <button class="btn btn-primary"
-                @onclick="StartAnimated"
-                disabled="@(isRunning || isFinished)">
-            @(isRunning ? "Выполняется..." : "Вычислить")
-        </button>
-    </div>
-
-    <div class="d-flex flex-wrap gap-4 mb-3">
-        <span><span style="color:#6366f1">■</span> Ожидает</span>
-        <span><span style="color:#ef4444">■</span> Текущий шаг</span>
-        <span><span style="color:#22c55e">■</span> Завершено</span>
-    </div>
-
-    <div style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:4px;
-        padding:16px;
-        border:1px solid #d1d5db;
-        border-radius:8px;">
-
-        @for (int i = 0; i < exponent; i++)
-        {
-            int idx = i;
-            <div title="Умножение №@(idx + 1)"
-                 style="
-                width:18px;
-                height:18px;
-                border-radius:4px;
-                background-color:@GetStepColor(idx);
-                transition:background-color 0.15s ease;">
-            </div>
-        }
-
-    </div>
-
-    <div class="text-center mt-3">
-        @if (isRunning)
-        {
-            <span>Шаг <strong>@currentStep</strong> из @exponent</span>
-        }
-        else if (isFinished)
-        {
-            <strong class="text-success">Готово</strong>
-        }
-        else
-        {
-            <span class="text-muted">Нажмите «Вычислить»</span>
-        }
-    </div>
-
-    <div class="row mt-4">
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Умножений</small>
-                    <h4>@multiplications</h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Текущий результат</small>
-                    <h4 style="word-break:break-all; font-size:1rem">
-                        @FormatBig(currentResult)
-                    </h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Длина результата</small>
-                    <h4>@resultDigits цифр</h4>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ====================================== -->
-    <!-- ЭКСПЕРИМЕНТ                           -->
-    <!-- ====================================== -->
-
-    <hr class="my-5" />
-
-    <h3>Экспериментальный анализ</h3>
-
-    <p>
-        Для каждого показателя n алгоритм выполняется 5 раз
-        (основание фиксировано, a = 2), измеряется среднее
-        машинное время.
-    </p>
-
-    <div class="row">
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Максимальное n</label>
-            <input type="number"
-                   class="form-control"
-                   min="10" max="2000"
-                   @bind="benchmarkMaxN"
-                   disabled="@benchmarkRunning" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Шаг</label>
-            <input type="number"
-                   class="form-control"
-                   min="1" max="500"
-                   @bind="benchmarkStep"
-                   disabled="@benchmarkRunning" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Запусков</label>
-            <input class="form-control" value="5" disabled />
-        </div>
-
-    </div>
-
-    <button class="btn btn-success"
-            @onclick="RunBenchmark"
-            disabled="@benchmarkRunning">
-        @(benchmarkRunning
-            ? "Эксперимент выполняется..."
-            : "Провести эксперимент")
-    </button>
-
-    @if (benchmarkRunning)
-    {
-        <div class="mt-3">
-            <div class="spinner-border spinner-border-sm"></div>
-            <span class="ms-2">Выполняется n = @currentBenchmarkN</span>
-        </div>
-    }
-
-    @if (benchmarkResults.Count > 0)
-    {
-        <div class="mt-5">
-
-            <h4>Зависимость времени выполнения от n</h4>
-
-            <ApexChart TItem="BenchmarkPoint" Height="400">
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="benchmarkResults"
-                                 Name="Эксперимент"
-                                 SeriesType="SeriesType.Line"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="theoreticalResults"
-                                 Name="Теория O(n)"
-                                 SeriesType="SeriesType.Line"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
-
-            </ApexChart>
-
-            <div class="alert alert-secondary mt-4">
-                <strong>Теоретический анализ</strong>
-                <p class="mt-2 mb-0">
-                    Наивный алгоритм выполняет ровно <em>n</em> умножений,
-                    поэтому его асимптотическая сложность — <strong>O(n)</strong>.
-                </p>
-            </div>
-
-        </div>
-    }
-
+<div class="alert alert-info">
+    <strong>Сложность:</strong> O(n)<br />
+    <strong>Количество умножений:</strong> n<br />
+    <strong>Память:</strong> O(1)
 </div>
 
+<hr />
+
+<h3>Экспериментальный анализ</h3>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control"
+               @bind="maxN" disabled="@running" />
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control"
+               @bind="step" disabled="@running" />
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-success"
+        @onclick="Run"
+        disabled="@running">
+    @(running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (running)
+{
+    <div class="mt-4">
+        <div class="d-flex justify-content-between">
+            <span>n = @currentN</span>
+            <strong>@progress.ToString("F1")%</strong>
+        </div>
+
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="@ProgressStyle">
+                @progress.ToString("F0")%
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="alert alert-success mt-3">
+        @saved
+        <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (points.Count > 0)
+{
+    <div class="mt-5">
+
+        <ComplexityChart Experimental="@points"
+                         Approximation="@approximation.Points"
+                         Title="Простое возведение в степень — число шагов"
+                         ApproximationName="Аппроксимация C·n"
+                         XAxisTitle="Показатель степени n"
+                         YAxisTitle="Количество шагов (умножений)"
+                         Height="520" />
+
+        <div class="alert alert-light border mt-4">
+            <strong>Аппроксимация:</strong><br />
+            T(n) ≈ @approximation.Coefficient.ToString("G6") · n<br />
+            R² = @approximation.R2.ToString("F4")
+        </div>
+
+        <div class="alert alert-secondary">
+            В простом итеративном алгоритме выполняется ровно n умножений.
+            Следовательно, временная сложность составляет <strong>O(n)</strong>.
+        </div>
+    </div>
+}
+
 @code {
+    private int maxN = 10000;
+    private int step = 500;
 
-    private int baseValue = 2;
-    private int exponent = 16;
-    private int animationSpeed = 3;
+    private int currentN;
+    private double progress;
+    private bool running;
 
-    private bool isRunning;
-    private bool isFinished;
+    private string error = "";
+    private string saved = "";
 
-    private int currentStep;
-    private long multiplications;
+    private List<BenchmarkPoint> points = new();
+    private ApproximationResult approximation = new();
 
-    private BigInteger currentResult = 1;
-    private int resultDigits = 1;
+    private const long BaseX = 2;
+    private const long Mod = 1_000_000_007; // защита от переполнения
 
-
-    private void Reset()
+    private async Task Run()
     {
-        currentStep = 0;
-        multiplications = 0;
-        currentResult = 1;
-        resultDigits = 1;
-        isFinished = false;
-    }
+        if (running) return;
 
+        error = "";
+        saved = "";
 
-    private async Task StartAnimated()
-    {
-        if (isRunning)
-            return;
-
-        Reset();
-
-        isRunning = true;
-
-        currentResult = 1;
-
-        StateHasChanged();
-        await Task.Delay(GetDelay());
-
-        for (int i = 0; i < exponent; i++)
+        if (maxN < 1 || step < 1)
         {
-            currentStep = i + 1;
-
-            currentResult *= baseValue;
-            multiplications++;
-            resultDigits = currentResult.ToString().Length;
-
-            StateHasChanged();
-            await Task.Delay(GetDelay());
+            error = "n и шаг должны быть больше нуля.";
+            return;
         }
 
-        isRunning = false;
-        isFinished = true;
+        running = true;
+        points.Clear();
 
-        StateHasChanged();
-    }
+        var sizes = BuildSizes(maxN, step);
+        int completed = 0;
 
-
-    private string GetStepColor(int index)
-    {
-        if (isFinished)
-            return "#22c55e";
-
-        if (isRunning && index == currentStep - 1)
-            return "#ef4444";
-
-        if (isRunning && index < currentStep - 1)
-            return "#22c55e";
-
-        return "#6366f1";
-    }
-
-
-    private static string FormatBig(BigInteger value)
-    {
-        var s = value.ToString();
-        if (s.Length <= 40)
-            return s;
-        return s[..20] + "…" + s[^20..];
-    }
-
-
-    private int GetDelay() => animationSpeed switch
-    {
-        1 => 600,
-        2 => 350,
-        3 => 180,
-        4 => 80,
-        5 => 20,
-        _ => 180
-    };
-
-
-    private string GetSpeedText() => animationSpeed switch
-    {
-        1 => "Очень медленно",
-        2 => "Медленно",
-        3 => "Средне",
-        4 => "Быстро",
-        5 => "Очень быстро",
-        _ => "Средне"
-    };
-
-
-    // ==========================================
-    // BENCHMARK
-    // ==========================================
-
-    private class BenchmarkPoint
-    {
-        public int N { get; set; }
-        public double TimeMs { get; set; }
-    }
-
-    private int benchmarkMaxN = 500;
-    private int benchmarkStep = 50;
-    private int currentBenchmarkN;
-    private bool benchmarkRunning;
-
-    private List<BenchmarkPoint> benchmarkResults = new();
-    private List<BenchmarkPoint> theoreticalResults = new();
-
-
-    private async Task RunBenchmark()
-    {
-        if (benchmarkRunning)
-            return;
-
-        if (benchmarkMaxN < 1 || benchmarkStep < 1)
-            return;
-
-        if (benchmarkMaxN > 2000)
-            benchmarkMaxN = 2000;
-
-        benchmarkRunning = true;
-
-        benchmarkResults.Clear();
-        theoreticalResults.Clear();
-
-        StateHasChanged();
-        await Task.Yield();
-
-        const int benchBase = 2;
-
-        for (int n = benchmarkStep; n <= benchmarkMaxN; n += benchmarkStep)
+        try
         {
-            currentBenchmarkN = n;
-
-            double total = 0;
-
-            for (int run = 0; run < 5; run++)
+            foreach (int n in sizes)
             {
-                var sw = Stopwatch.StartNew();
-                SimplePower(benchBase, n);
-                sw.Stop();
-                total += sw.Elapsed.TotalMilliseconds;
+                currentN = n;
+
+                long steps = CountSteps(BaseX, n);
+
+                points.Add(new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs = steps
+                });
+
+                completed++;
+
+                progress = (double)completed * 100 / sizes.Count;
+                StateHasChanged();
+                await Task.Yield();
             }
 
-            benchmarkResults.Add(new BenchmarkPoint
-            {
-                N = n,
-                TimeMs = total / 5.0
-            });
+            approximation = ApproximationService.Fit(
+                points,
+                ComplexityType.Linear);
 
-            StateHasChanged();
-            await Task.Yield();
+            await SaveService.SaveAsync(
+                "power-simple",
+                "Простое возведение в степень",
+                "O(n)",
+                maxN,
+                step,
+                1,
+                points,
+                approximation);
+
+            saved = "Эксперимент сохранён.";
         }
-
-        BuildTheoreticalCurve();
-
-        currentBenchmarkN = 0;
-        benchmarkRunning = false;
-
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            progress = 100;
+            running = false;
+            currentN = 0;
+        }
     }
 
-
-    private static BigInteger SimplePower(int a, int n)
+    private static long CountSteps(long x, int n)
     {
-        BigInteger result = 1;
+        long result = 1;
+        long steps = 0;
+
         for (int i = 0; i < n; i++)
-            result *= a;
+        {
+            result = (result * x) % Mod;
+            steps++;
+        }
+
+        return steps;
+    }
+
+    private static List<int> BuildSizes(int max, int step)
+    {
+        var result = new List<int>();
+
+        for (int n = 1; n <= max; n += step)
+            result.Add(n);
+
+        if (result.Count == 0 || result[^1] != max)
+            result.Add(max);
+
         return result;
     }
 
-
-    private void BuildTheoreticalCurve()
-    {
-        theoreticalResults.Clear();
-
-        if (benchmarkResults.Count == 0)
-            return;
-
-        double num = 0, den = 0;
-
-        foreach (var p in benchmarkResults)
-        {
-            double t = p.N;
-            num += p.TimeMs * t;
-            den += t * t;
-        }
-
-        double c = den == 0 ? 0 : num / den;
-
-        foreach (var p in benchmarkResults)
-        {
-            theoreticalResults.Add(new BenchmarkPoint
-            {
-                N = p.N,
-                TimeMs = c * p.N
-            });
-        }
-    }
-
+    private string ProgressStyle =>
+        $"width:{progress.ToString("F1",
+            System.Globalization.CultureInfo.InvariantCulture)}%;";
 }

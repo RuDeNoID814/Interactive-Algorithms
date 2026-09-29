@@ -118,16 +118,6 @@ public static class AlgorithmRegistry
 
         new()
         {
-            Name = "Классическое быстрое возведение",
-            Description = "QuickPow из задания",
-            Complexity = "O(log n)",
-            ComplexityType = ComplexityType.Logarithmic,
-            Slug = "pow-classic",
-            Category = "Степень"
-        },
-
-        new()
-        {
             Name = "Умножение матриц",
             Description = "Классический алгоритм с тремя циклами",
             Complexity = "O(n³)",
@@ -159,6 +149,16 @@ public static class AlgorithmRegistry
             ComplexityType = ComplexityType.Linear,
             Slug = "bfs",
             Category = "Графы"
+        },
+
+        new()
+        {
+            Name = "Алгоритм Хаффмана",
+            Description = "Метод построения оптимального префиксного кода",
+            Complexity = "O(n log n)",
+            ComplexityType = ComplexityType.Linearithmic,
+            Slug = "huffman",
+            Category = "Труднорешаемые задачи"
         }
     ];
 

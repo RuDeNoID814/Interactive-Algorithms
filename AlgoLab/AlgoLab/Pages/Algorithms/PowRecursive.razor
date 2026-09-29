@@ -1,568 +1,219 @@
 ﻿@using System.Diagnostics
-@using System.Numerics
+@inject ExperimentSaveService SaveService
 
-<div>
+<h3>Рекурсивное возведение в степень</h3>
 
-    <h3>Рекурсивное возведение в степень</h3>
+<p>
+    Рекурсивный алгоритм, основанный на формуле
+    <em>x<sup>n</sup> = x · x<sup>n−1</sup></em>.
+    На каждом шаге степень уменьшается на единицу,
+    пока не достигнет нуля.
+</p>
 
-    <p>
-        Рекурсивный вариант быстрого возведения в степень. Идея:
-        <em>a<sup>n</sup> = (a<sup>n/2</sup>)²</em>, а при нечётном
-        <em>n</em> добавляется ещё одно умножение на <em>a</em>.
-        Глубина рекурсии — O(log n).
-    </p>
-
-    <div class="alert alert-info">
-        <strong>Лучший случай:</strong> O(log n)
-        <br />
-        <strong>Средний случай:</strong> O(log n)
-        <br />
-        <strong>Худший случай:</strong> O(log n)
-        <br />
-        <strong>Дополнительная память:</strong> O(log n) — стек вызовов
-    </div>
-
-    <!-- ====================================== -->
-    <!-- ВИЗУАЛИЗАЦИЯ                          -->
-    <!-- ====================================== -->
-
-    <h4 class="mt-4">Визуализация алгоритма</h4>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Основание a: <strong>@baseValue</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="2" max="9"
-               @bind="baseValue"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Показатель n: <strong>@exponent</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="1" max="64"
-               @bind="exponent"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Скорость анимации: <strong>@GetSpeedText()</strong>
-        </label>
-        <input type="range"
-               class="form-range"
-               min="1" max="5"
-               @bind="animationSpeed"
-               disabled="@isRunning" />
-    </div>
-
-    <div class="d-flex gap-2 mb-4">
-        <button class="btn btn-secondary"
-                @onclick="Reset"
-                disabled="@isRunning">
-            Сброс
-        </button>
-        <button class="btn btn-primary"
-                @onclick="StartAnimated"
-                disabled="@(isRunning || isFinished)">
-            @(isRunning ? "Выполняется..." : "Вычислить")
-        </button>
-    </div>
-
-    <div class="d-flex flex-wrap gap-4 mb-3">
-        <span><span style="color:#6366f1">■</span> Ожидает</span>
-        <span><span style="color:#ef4444">■</span> Активный вызов</span>
-        <span><span style="color:#22c55e">■</span> Завершён</span>
-    </div>
-
-    <div style="
-        padding:16px;
-        border:1px solid #d1d5db;
-        border-radius:8px;
-        min-height:120px;">
-
-        @if (callStack.Count == 0)
-        {
-            <span class="text-muted">Стек вызовов пуст</span>
-        }
-        else
-        {
-            @for (int i = 0; i < callStack.Count; i++)
-            {
-                var call = callStack[i];
-                int depth = i;
-
-                <div style="
-                    margin-left:@(depth * 22)px;
-                    margin-bottom:4px;
-                    padding:6px 10px;
-                    border-radius:6px;
-                    border-left:4px solid @GetCallBorderColor(call);
-                    background-color:#f8fafc;
-                    transition:all 0.15s ease;">
-
-                    <span style="font-family:monospace; font-weight:600">
-                        Pow(a, @call.N)
-                    </span>
-
-                    @if (call.State == "waiting")
-                    {
-                        <span class="text-muted"> — ожидает</span>
-                    }
-                    else if (call.State == "running")
-                    {
-                        <span class="text-danger"> — выполняется</span>
-                    }
-                    else
-                    {
-                        <span class="text-success">
-                            = @FormatBig(call.Result)
-                        </span>
-                    }
-
-                </div>
-            }
-        }
-
-    </div>
-
-    <div class="text-center mt-3">
-        @if (isRunning)
-        {
-            <span>
-                Глубина: <strong>@currentDepth</strong>
-                &nbsp;|&nbsp;
-                Текущий n: <strong>@currentN</strong>
-            </span>
-        }
-        else if (isFinished)
-        {
-            <strong class="text-success">
-                Готово, результат получен
-            </strong>
-        }
-        else
-        {
-            <span class="text-muted">Нажмите «Вычислить»</span>
-        }
-    </div>
-
-    <div class="row mt-4">
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Умножений</small>
-                    <h4>@multiplications</h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Макс. глубина рекурсии</small>
-                    <h4>@maxDepth</h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <small class="text-muted">Длина результата</small>
-                    <h4>@resultDigits цифр</h4>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ====================================== -->
-    <!-- ЭКСПЕРИМЕНТ                           -->
-    <!-- ====================================== -->
-
-    <hr class="my-5" />
-
-    <h3>Экспериментальный анализ</h3>
-
-    <p>
-        Для каждого показателя n алгоритм выполняется 5 раз
-        (основание фиксировано, a = 2), измеряется среднее
-        машинное время.
-    </p>
-
-    <div class="row">
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Максимальное n</label>
-            <input type="number"
-                   class="form-control"
-                   min="10" max="2000"
-                   @bind="benchmarkMaxN"
-                   disabled="@benchmarkRunning" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Шаг</label>
-            <input type="number"
-                   class="form-control"
-                   min="1" max="500"
-                   @bind="benchmarkStep"
-                   disabled="@benchmarkRunning" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Запусков</label>
-            <input class="form-control" value="5" disabled />
-        </div>
-
-    </div>
-
-    <button class="btn btn-success"
-            @onclick="RunBenchmark"
-            disabled="@benchmarkRunning">
-        @(benchmarkRunning
-            ? "Эксперимент выполняется..."
-            : "Провести эксперимент")
-    </button>
-
-    @if (benchmarkRunning)
-    {
-        <div class="mt-3">
-            <div class="spinner-border spinner-border-sm"></div>
-            <span class="ms-2">Выполняется n = @currentBenchmarkN</span>
-        </div>
-    }
-
-    @if (benchmarkResults.Count > 0)
-    {
-        <div class="mt-5">
-
-            <h4>Зависимость времени выполнения от n</h4>
-
-            <ApexChart TItem="BenchmarkPoint" Height="400">
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="benchmarkResults"
-                                 Name="Эксперимент"
-                                 SeriesType="SeriesType.Line"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
-
-                <ApexPointSeries TItem="BenchmarkPoint"
-                                 Items="theoreticalResults"
-                                 Name="Теория O(log n)"
-                                 SeriesType="SeriesType.Line"
-                                 XValue="@(p => p.N)"
-                                 YValue="@(p => (decimal)p.TimeMs)" />
-
-            </ApexChart>
-
-            <div class="alert alert-secondary mt-4">
-                <strong>Теоретический анализ</strong>
-                <p class="mt-2 mb-1">
-                    Рекурсивная функция вызывается для
-                    <em>n, n/2, n/4, …</em> — всего <em>O(log n)</em>
-                    уровней.
-                </p>
-                <p class="mb-0">
-                    Каждый уровень выполняет O(1) умножений
-                    (BigInteger), поэтому общая сложность — <strong>O(log n)</strong>.
-                </p>
-            </div>
-
-        </div>
-    }
-
+<div class="alert alert-info">
+    <strong>Сложность:</strong> O(n)<br />
+    <strong>Количество умножений / рекурсивных вызовов:</strong> n<br />
+    <strong>Глубина рекурсии:</strong> n
 </div>
 
+<hr />
+
+<h3>Экспериментальный анализ</h3>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="1" class="form-control"
+               @bind="maxN" disabled="@running" />
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control"
+               @bind="step" disabled="@running" />
+    </div>
+</div>
+
+@if (maxN > 2000)
+{
+    <div class="alert alert-warning">
+        Рекурсивный алгоритм имеет глубину рекурсии n.
+        Большое n может привести к переполнению стека.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-success"
+        @onclick="Run"
+        disabled="@running">
+    @(running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (running)
+{
+    <div class="mt-4">
+        <div class="d-flex justify-content-between">
+            <span>n = @currentN</span>
+            <strong>@progress.ToString("F1")%</strong>
+        </div>
+
+        <div class="progress mt-2" style="height:25px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="@ProgressStyle">
+                @progress.ToString("F0")%
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="alert alert-success mt-3">
+        @saved
+        <a href="/history" class="alert-link ms-2">История</a>
+    </div>
+}
+
+@if (points.Count > 0)
+{
+    <div class="mt-5">
+
+        <ComplexityChart Experimental="@points"
+                         Approximation="@approximation.Points"
+                         Title="Рекурсивное возведение в степень — число шагов"
+                         ApproximationName="Аппроксимация C·n"
+                         XAxisTitle="Показатель степени n"
+                         YAxisTitle="Количество шагов (вызовов)"
+                         Height="520" />
+
+        <div class="alert alert-light border mt-4">
+            <strong>Аппроксимация:</strong><br />
+            T(n) ≈ @approximation.Coefficient.ToString("G6") · n<br />
+            R² = @approximation.R2.ToString("F4")
+        </div>
+
+        <div class="alert alert-secondary">
+            Рекурсивный алгоритм выполняет ровно n умножений
+            и n рекурсивных вызовов. Следовательно, сложность
+            составляет <strong>O(n)</strong>, а глубина рекурсии — <strong>O(n)</strong>.
+        </div>
+    </div>
+}
+
 @code {
+    private int maxN = 1000;
+    private int step = 50;
 
-    private int baseValue = 2;
-    private int exponent = 32;
-    private int animationSpeed = 3;
-
-    private bool isRunning;
-    private bool isFinished;
-
-    private long multiplications;
-    private int currentDepth;
     private int currentN;
-    private int maxDepth;
-    private int resultDigits;
+    private double progress;
+    private bool running;
 
+    private string error = "";
+    private string saved = "";
 
-    private class RecCall
+    private List<BenchmarkPoint> points = new();
+    private ApproximationResult approximation = new();
+
+    private const long BaseX = 2;
+    private const long Mod = 1_000_000_007;
+
+    private async Task Run()
     {
-        public int N { get; set; }
-        public string State { get; set; } = "running"; // waiting | running | done
-        public BigInteger Result { get; set; }
-    }
+        if (running) return;
 
-    private List<RecCall> callStack = new();
+        error = "";
+        saved = "";
 
-
-    private void Reset()
-    {
-        multiplications = 0;
-        currentDepth = 0;
-        currentN = 0;
-        maxDepth = 0;
-        resultDigits = 0;
-        callStack.Clear();
-        isFinished = false;
-    }
-
-
-    private async Task StartAnimated()
-    {
-        if (isRunning)
+        if (maxN < 1 || step < 1)
+        {
+            error = "n и шаг должны быть больше нуля.";
             return;
-
-        Reset();
-
-        isRunning = true;
-
-        StateHasChanged();
-        await Task.Delay(GetDelay());
-
-        var result = await PowRecAsync(baseValue, exponent);
-
-        resultDigits = result.ToString().Length;
-
-        isRunning = false;
-        isFinished = true;
-
-        StateHasChanged();
-    }
-
-
-    private async Task<BigInteger> PowRecAsync(int a, int n)
-    {
-        if (callStack.Count > 0 && callStack[^1].State == "running")
-            callStack[^1].State = "waiting";
-
-        var call = new RecCall
-        {
-            N = n,
-            State = "running"
-        };
-
-        callStack.Add(call);
-
-        currentDepth = callStack.Count;
-        currentN = n;
-
-        if (currentDepth > maxDepth)
-            maxDepth = currentDepth;
-
-        StateHasChanged();
-        await Task.Delay(GetDelay());
-
-        BigInteger result;
-
-        if (n == 0)
-        {
-            result = 1;
         }
-        else if (n == 1)
+
+        running = true;
+        points.Clear();
+
+        var sizes = BuildSizes(maxN, step);
+        int completed = 0;
+
+        try
         {
-            result = a;
-        }
-        else
-        {
-            BigInteger half = await PowRecAsync(a, n / 2);
-
-            call.State = "running";
-            currentDepth = callStack.Count;
-            currentN = n;
-
-            multiplications++;
-            result = half * half;
-
-            StateHasChanged();
-            await Task.Delay(GetDelay());
-
-            if ((n & 1) == 1)
+            foreach (int n in sizes)
             {
-                multiplications++;
-                result *= a;
+                currentN = n;
 
+                long steps = 0;
+                Power(BaseX, n, ref steps);
+
+                points.Add(new BenchmarkPoint
+                {
+                    N = n,
+                    TimeMs = steps
+                });
+
+                completed++;
+
+                progress = (double)completed * 100 / sizes.Count;
                 StateHasChanged();
-                await Task.Delay(GetDelay());
+                await Task.Yield();
             }
+
+            approximation = ApproximationService.Fit(
+                points,
+                ComplexityType.Linear);
+
+            await SaveService.SaveAsync(
+                "power-recursive",
+                "Рекурсивное возведение в степень",
+                "O(n)",
+                maxN,
+                step,
+                1,
+                points,
+                approximation);
+
+            saved = "Эксперимент сохранён.";
         }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            progress = 100;
+            running = false;
+            currentN = 0;
+        }
+    }
 
-        call.State = "done";
-        call.Result = result;
+    private static long Power(long x, int n, ref long steps)
+    {
+        if (n == 0)
+            return 1;
 
-        StateHasChanged();
-        await Task.Delay(GetDelay());
+        steps++; // один рекурсивный вызов = одно умножение
+        long inner = Power(x, n - 1, ref steps);
+        return (x * inner) % Mod;
+    }
+
+    private static List<int> BuildSizes(int max, int step)
+    {
+        var result = new List<int>();
+
+        for (int n = 1; n <= max; n += step)
+            result.Add(n);
+
+        if (result.Count == 0 || result[^1] != max)
+            result.Add(max);
 
         return result;
     }
 
-
-    private string GetCallBorderColor(RecCall call) => call.State switch
-    {
-        "done" => "#22c55e",
-        "waiting" => "#6366f1",
-        _ => "#ef4444"
-    };
-
-
-    private static string FormatBig(BigInteger value)
-    {
-        var s = value.ToString();
-        if (s.Length <= 40)
-            return s;
-        return s[..20] + "…" + s[^20..];
-    }
-
-
-    private int GetDelay() => animationSpeed switch
-    {
-        1 => 600,
-        2 => 350,
-        3 => 180,
-        4 => 80,
-        5 => 20,
-        _ => 180
-    };
-
-
-    private string GetSpeedText() => animationSpeed switch
-    {
-        1 => "Очень медленно",
-        2 => "Медленно",
-        3 => "Средне",
-        4 => "Быстро",
-        5 => "Очень быстро",
-        _ => "Средне"
-    };
-
-
-    // ==========================================
-    // BENCHMARK
-    // ==========================================
-
-    private class BenchmarkPoint
-    {
-        public int N { get; set; }
-        public double TimeMs { get; set; }
-    }
-
-    private int benchmarkMaxN = 500;
-    private int benchmarkStep = 50;
-    private int currentBenchmarkN;
-    private bool benchmarkRunning;
-
-    private List<BenchmarkPoint> benchmarkResults = new();
-    private List<BenchmarkPoint> theoreticalResults = new();
-
-
-    private async Task RunBenchmark()
-    {
-        if (benchmarkRunning)
-            return;
-
-        if (benchmarkMaxN < 1 || benchmarkStep < 1)
-            return;
-
-        if (benchmarkMaxN > 2000)
-            benchmarkMaxN = 2000;
-
-        benchmarkRunning = true;
-
-        benchmarkResults.Clear();
-        theoreticalResults.Clear();
-
-        StateHasChanged();
-        await Task.Yield();
-
-        const int benchBase = 2;
-
-        for (int n = benchmarkStep; n <= benchmarkMaxN; n += benchmarkStep)
-        {
-            currentBenchmarkN = n;
-
-            double total = 0;
-
-            for (int run = 0; run < 5; run++)
-            {
-                var sw = Stopwatch.StartNew();
-                RecursivePower(benchBase, n);
-                sw.Stop();
-                total += sw.Elapsed.TotalMilliseconds;
-            }
-
-            benchmarkResults.Add(new BenchmarkPoint
-            {
-                N = n,
-                TimeMs = total / 5.0
-            });
-
-            StateHasChanged();
-            await Task.Yield();
-        }
-
-        BuildTheoreticalCurve();
-
-        currentBenchmarkN = 0;
-        benchmarkRunning = false;
-
-        StateHasChanged();
-    }
-
-
-    private static BigInteger RecursivePower(int a, int n)
-    {
-        if (n == 0) return 1;
-        if (n == 1) return a;
-
-        var half = RecursivePower(a, n / 2);
-        var result = half * half;
-
-        if ((n & 1) == 1)
-            result *= a;
-
-        return result;
-    }
-
-
-    private void BuildTheoreticalCurve()
-    {
-        theoreticalResults.Clear();
-
-        if (benchmarkResults.Count == 0)
-            return;
-
-        double num = 0, den = 0;
-
-        foreach (var p in benchmarkResults)
-        {
-            double t = Math.Log2(Math.Max(2, p.N));
-            num += p.TimeMs * t;
-            den += t * t;
-        }
-
-        double c = den == 0 ? 0 : num / den;
-
-        foreach (var p in benchmarkResults)
-        {
-            double t = Math.Log2(Math.Max(2, p.N));
-            theoreticalResults.Add(new BenchmarkPoint
-            {
-                N = p.N,
-                TimeMs = c * t
-            });
-        }
-    }
-
+    private string ProgressStyle =>
+        $"width:{progress.ToString("F1",
+            System.Globalization.CultureInfo.InvariantCulture)}%;";
 }
