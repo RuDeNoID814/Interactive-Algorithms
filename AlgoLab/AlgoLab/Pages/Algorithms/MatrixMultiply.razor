@@ -1,265 +1,1294 @@
-﻿@using System.Diagnostics
+@using System.Diagnostics
 @using Microsoft.JSInterop
-@inherits AlgorithmExperimentBase
 
+@inject ExperimentSaveService SaveService
 @inject IJSRuntime JS
 
+
 <h3>Классическое умножение матриц</h3>
-<p>Для двух квадратных матриц A и B размера n×n вычисляется произведение C = A × B.</p>
+
+<p>
+    Классическое умножение матриц выполняется
+    с помощью трёх вложенных циклов.
+</p>
+
 
 <div class="alert alert-info">
-    <strong>Временная сложность:</strong> O(n³)<br />
-    <strong>Дополнительная память:</strong> O(n²)<br />
-    <strong>Структура алгоритма:</strong> три вложенных цикла
+
+    <strong>Квадратные матрицы:</strong>
+    O(n³)
+
+    <br />
+
+    <strong>Матрицы A(n×m) и B(m×n):</strong>
+    O(n²·m)
+
 </div>
 
-<hr />
-<h3>Экспериментальный анализ</h3>
 
-<p>Для каждого размера генерируются две случайные матрицы. Алгоритм запускается пять раз.</p>
+<!-- ================================================= -->
+<!-- 2D                                               -->
+<!-- ================================================= -->
+
+<hr class="my-4" />
+
+
+<h3>
+    2D-анализ
+</h3>
+
+
+<p>
+    Эксперимент для квадратных матриц
+    A(n×n) и B(n×n).
+</p>
+
 
 <div class="row">
+
+
     <div class="col-md-4 mb-3">
-        <label>Максимальное n</label>
-        <input type="number" min="1" class="form-control" @bind="MaxN" disabled="@Running" />
+
+        <label class="form-label">
+            Максимальное n
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="maxN2D"
+               disabled="@AnyRunning" />
+
     </div>
+
+
     <div class="col-md-4 mb-3">
-        <label>Шаг</label>
-        <input type="number" min="1" class="form-control" @bind="Step" disabled="@Running" />
+
+        <label class="form-label">
+            Шаг
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="step2D"
+               disabled="@AnyRunning" />
+
     </div>
+
+
     <div class="col-md-4 mb-3">
-        <label>Запусков</label>
-        <input class="form-control" value="@Runs" disabled />
+
+        <label class="form-label">
+            Запусков
+        </label>
+
+        <input class="form-control"
+               value="@Runs"
+               disabled />
+
     </div>
+
+
 </div>
 
-@if (MaxN >= 500)
+
+@if (maxN2D >= 500)
 {
     <div class="alert alert-warning">
-        <strong>Предупреждение.</strong> Алгоритм имеет сложность O(n³). Большие матрицы могут выполняться продолжительное время.
+
+        Сложность O(n³). Большие размеры
+        могут вычисляться продолжительное время.
+
     </div>
 }
 
-@if (!string.IsNullOrWhiteSpace(Error))
-{
-    <div class="alert alert-danger">@Error</div>
-}
 
-<button class="btn btn-success" @onclick="OnRunClicked" disabled="@Running">
-    @(Running ? "Эксперимент выполняется..." : "Запустить эксперимент")
+<button class="btn btn-success"
+        @onclick="Run2D"
+        disabled="@AnyRunning">
+
+    @(running2D
+        ? "2D-эксперимент выполняется..."
+        : "Запустить 2D-эксперимент")
+
 </button>
 
-@if (Running)
+
+@if (running2D)
 {
     <div class="mt-4">
+
         <div class="d-flex justify-content-between">
-            <span>n = <strong>@CurrentN</strong>, запуск <strong>@CurrentRun</strong> из @Runs</span>
-            <strong>@Progress.ToString("F1")%</strong>
+
+            <span>
+                n = @currentN,
+                запуск @currentRun из @Runs
+            </span>
+
+            <strong>
+                @progress2D.ToString("F1")%
+            </strong>
+
         </div>
-        <div class="progress mt-2" style="height:25px">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" style="@ProgressStyle">
-                @Progress.ToString("F0")%
+
+
+        <div class="progress mt-2"
+             style="height:25px;">
+
+            <div class="
+                progress-bar
+                progress-bar-striped
+                progress-bar-animated"
+                 style="@Progress2DStyle">
+
+                @progress2D.ToString("F0")%
+
             </div>
+
         </div>
+
     </div>
 }
 
-@if (!string.IsNullOrWhiteSpace(Saved))
-{
-    <div class="alert alert-success mt-3">
-        @Saved <a href="/history" class="alert-link ms-2">Открыть историю</a>
-    </div>
-}
 
-@if (Points.Count > 0)
+@if (points2D.Count > 0)
 {
     <div class="mt-5">
-        <h4>Среднее время выполнения</h4>
 
-        <ComplexityChart Experimental="@Points"
-                         Approximation="@Approximation.Points"
-                         Title="Умножение матриц — временная сложность"
+        <ComplexityChart Experimental="@points2D"
+                         Approximation="@approximation2D.Points"
+                         Title="Умножение квадратных матриц"
                          ApproximationName="Аппроксимация C·n³"
-                         XAxisTitle="Размер матрицы n"
+                         XAxisTitle="Размер квадратной матрицы n"
                          YAxisTitle="Среднее время выполнения, мс"
                          Height="520" />
 
+
         <div class="alert alert-light border mt-4">
-            <h5>Аппроксимация</h5>
-            <div style="font-family:monospace;font-size:1.15rem;">
-                T(n) ≈ @Approximation.Coefficient.ToString("G6") · n³
-            </div>
-            <div class="mt-2">
-                R² = <strong>@Approximation.R2.ToString("F4")</strong>
-            </div>
+
+            <strong>
+                Аппроксимация:
+            </strong>
+
+            T(n) ≈
+            @approximation2D.Coefficient.ToString("G6")
+            · n³
+
+            <br />
+
+            <strong>
+                R²:
+            </strong>
+
+            @approximation2D.R2.ToString("F4")
+
         </div>
 
-        <div class="mt-5">
-            <h4>Трёхмерный график пяти запусков</h4>
-            <p class="text-muted">
-                <strong>X:</strong> размер матрицы n<br />
-                <strong>Y:</strong> номер запуска от 1 до 5<br />
-                <strong>Z:</strong> машинное время выполнения, мс
-            </p>
-
-            <div id="@plotId" style="width:100%;min-height:600px;border:1px solid #e5e7eb;border-radius:8px;"></div>
-
-            @if (!string.IsNullOrWhiteSpace(plotError))
-            {
-                <div class="alert alert-warning mt-2">Ошибка 3D-графика: @plotError</div>
-            }
-        </div>
-
-        <div class="alert alert-secondary mt-5">
-            <strong>Теоретический анализ</strong>
-            <p class="mt-2 mb-1">Используются три вложенных цикла:</p>
-            <code>
-                for i = 0..n-1<br />
-                &nbsp;&nbsp;for j = 0..n-1<br />
-                &nbsp;&nbsp;&nbsp;&nbsp;for k = 0..n-1
-            </code>
-            <p class="mt-2 mb-0">Следовательно: <strong>T(n) = O(n³)</strong>.</p>
-        </div>
-
-        <div class="mt-4">
-            <h4>Последние отдельные замеры</h4>
-            <div class="table-responsive">
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr><th>n</th><th>Запуск</th><th>Время, мс</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var point in runPoints.TakeLast(Math.Min(50, runPoints.Count)))
-                        {
-                            <tr>
-                                <td>@point.N</td>
-                                <td>@point.Run</td>
-                                <td>@point.TimeMs.ToString("F6")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 }
 
-<CachePromptDialog Show="ShowCachePrompt" Experiment="CachedExperiment"
-                   OnUseCache="UseCachedResult" OnRecalculate="ForceRecalculate" />
 
-@code {
-    protected override string AlgorithmSlug => "matrix";
-    protected override string AlgorithmName => "Умножение матриц";
-    protected override string AlgorithmComplexity => "O(n³)";
-    protected override ComplexityType ComplexityType => ComplexityType.Cubic;
+<!-- ================================================= -->
+<!-- 3D                                               -->
+<!-- ================================================= -->
 
-    protected override int MaxN { get; set; } = 200;
-    protected override int Step { get; set; } = 10;
+<hr class="my-5" />
 
-    private List<BenchmarkPoint> runPoints = new();
-    private string plotError = "";
-    private readonly string plotId = "matrix-3d-" + Guid.NewGuid().ToString("N");
-    private bool draw3D;
 
-    protected override IReadOnlyList<BenchmarkPoint>? GetIndividualRuns() => runPoints;
+<h3>
+    3D-анализ
+</h3>
 
-    protected override void UseCachedResult()
-    {
-        base.UseCachedResult();
-        if (CachedExperiment == null) return;
 
-        runPoints = CachedExperiment.Points
-            .Where(p => !p.IsAverage)
-            .Select(p => new BenchmarkPoint { N = p.N, Run = p.Run, TimeMs = p.TimeMs })
-            .ToList();
+<div class="alert alert-secondary">
 
-        draw3D = true;
-        StateHasChanged();
-    }
+    Используются матрицы:
 
-    protected override async Task<List<BenchmarkPoint>> RunExperimentLogicAsync(
-        int maxN, int step, int runs, Action<int, int, double> updateProgress)
-    {
-        var averagePoints = new List<BenchmarkPoint>();
-        runPoints.Clear();
+    <br />
 
-        var sizes = BuildSizes(maxN, step);
-        var random = new Random();
-        int completed = 0;
+    <strong>
+        A = n × m
+    </strong>
 
-        foreach (int n in sizes)
+    <br />
+
+    <strong>
+        B = m × n
+    </strong>
+
+    <br />
+
+    <strong>
+        C = n × n
+    </strong>
+
+    <br /><br />
+
+    Для каждой пары (n,m) выполняется
+    пять независимых замеров.
+
+</div>
+
+
+<div class="row">
+
+
+    <div class="col-md-3 mb-3">
+
+        <label class="form-label">
+            Максимальное n
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="maxN3D"
+               disabled="@AnyRunning" />
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <label class="form-label">
+            Шаг n
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="stepN3D"
+               disabled="@AnyRunning" />
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <label class="form-label">
+            Максимальное m
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="maxM3D"
+               disabled="@AnyRunning" />
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <label class="form-label">
+            Шаг m
+        </label>
+
+        <input type="number"
+               class="form-control"
+               min="1"
+               @bind="stepM3D"
+               disabled="@AnyRunning" />
+
+    </div>
+
+
+</div>
+
+
+@if (maxN3D >= 500 ||
+     maxM3D >= 500)
+{
+    <div class="alert alert-warning">
+
+        Поверхность может потребовать большое
+        количество вычислений.
+
+    </div>
+}
+
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+
+
+<button class="btn btn-primary"
+        @onclick="Run3D"
+        disabled="@AnyRunning">
+
+    @(running3D
+        ? "3D-эксперимент выполняется..."
+        : "Запустить 3D-эксперимент")
+
+</button>
+
+
+@if (running3D)
+{
+    <div class="mt-4">
+
+
+        <div class="d-flex justify-content-between">
+
+            <span>
+
+                n =
+                <strong>@currentN</strong>,
+
+                m =
+                <strong>@currentM</strong>,
+
+                запуск
+
+                <strong>@currentRun</strong>
+
+                из @Runs
+
+            </span>
+
+
+            <strong>
+                @progress3D.ToString("F1")%
+            </strong>
+
+        </div>
+
+
+        <div class="progress mt-2"
+             style="height:25px;">
+
+            <div class="
+                progress-bar
+                progress-bar-striped
+                progress-bar-animated
+                bg-primary"
+                 style="@Progress3DStyle">
+
+                @progress3D.ToString("F0")%
+
+            </div>
+
+        </div>
+
+
+        <small class="text-muted">
+
+            Комбинаций:
+            @completedPairs /
+            @totalPairs
+
+        </small>
+
+    </div>
+}
+
+
+@if (!string.IsNullOrWhiteSpace(saved3D))
+{
+    <div class="alert alert-success mt-3">
+
+        @saved3D
+
+        <a href="/history"
+           class="alert-link ms-2">
+
+            Открыть историю
+
+        </a>
+
+    </div>
+}
+
+
+@if (hasSurface)
+{
+    <div class="mt-5">
+
+
+        <h4>
+            3D-поверхность
+        </h4>
+
+
+        <p class="text-muted">
+
+            X — размер n.
+
+            Y — размер m.
+
+            Z — среднее время выполнения.
+
+        </p>
+
+
+        <div id="@surfaceId"
+             style="
+            width:100%;
+            min-height:650px;
+            border:1px solid #e5e7eb;
+            border-radius:8px;">
+        </div>
+
+
+        @if (!string.IsNullOrWhiteSpace(plotError))
         {
-            double[,] a = Generate(n, random);
-            double[,] b = Generate(n, random);
-            double total = 0;
+            <div class="alert alert-warning mt-2">
 
-            for (int run = 1; run <= runs; run++)
-            {
-                var sw = Stopwatch.StartNew();
-                Multiply(a, b);
-                sw.Stop();
+                @plotError
 
-                double time = sw.Elapsed.TotalMilliseconds;
-                total += time;
-
-                runPoints.Add(new BenchmarkPoint { N = n, Run = run, TimeMs = time });
-
-                double progress = (completed + (double)run / runs) * 100 / sizes.Count;
-                updateProgress(n, run, progress);
-                await Task.Yield();
-            }
-
-            averagePoints.Add(new BenchmarkPoint { N = n, TimeMs = total / runs });
-            completed++;
+            </div>
         }
 
-        averagePoints = averagePoints.OrderBy(p => p.N).ToList();
-        draw3D = true;
-        return averagePoints;
-    }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+        <div class="alert alert-light border mt-4">
+
+            Для A(n×m) и B(m×n)
+            вычисляется n² элементов результата,
+            для каждого из которых выполняется m
+            умножений.
+
+            <br />
+
+            <strong>
+                T(n,m) = O(n²·m)
+            </strong>
+
+            <br />
+
+            При n=m:
+
+            <strong>
+                O(n³)
+            </strong>.
+
+        </div>
+
+
+        <div class="table-responsive mt-4">
+
+            <table class="
+                table
+                table-sm
+                table-striped">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            n
+                        </th>
+
+                        <th>
+                            m
+                        </th>
+
+                        <th>
+                            Среднее время, мс
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    @foreach (var point
+                        in surfacePoints
+                            .OrderBy(p => p.N)
+                            .ThenBy(p => p.M))
+                    {
+                        <tr>
+
+                            <td>
+                                @point.N
+                            </td>
+
+                            <td>
+                                @point.M
+                            </td>
+
+                            <td>
+                                @point.TimeMs.ToString("F6")
+                            </td>
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    </div>
+}
+
+
+@code {
+
+    private const int Runs = 5;
+
+
+    // =====================================================
+    // 2D
+    // =====================================================
+
+    private int maxN2D = 200;
+
+    private int step2D = 10;
+
+
+    private bool running2D;
+
+    private double progress2D;
+
+
+    private List<BenchmarkPoint> points2D =
+        new();
+
+
+    private ApproximationResult approximation2D =
+        new();
+
+
+    // =====================================================
+    // 3D
+    // =====================================================
+
+    private int maxN3D = 100;
+
+    private int stepN3D = 10;
+
+
+    private int maxM3D = 100;
+
+    private int stepM3D = 10;
+
+
+    private bool running3D;
+
+
+    private double progress3D;
+
+
+    private int totalPairs;
+
+    private int completedPairs;
+
+
+    private List<int> surfaceN =
+        new();
+
+
+    private List<int> surfaceM =
+        new();
+
+
+    private double[][] surfaceZ =
+        Array.Empty<double[]>();
+
+
+    private List<MatrixSurfacePoint> surfacePoints =
+        new();
+
+
+    private bool hasSurface;
+
+    private bool drawSurface;
+
+
+    // =====================================================
+    // COMMON STATE
+    // =====================================================
+
+    private int currentN;
+
+    private int currentM;
+
+    private int currentRun;
+
+
+    private string error = "";
+
+    private string plotError = "";
+
+    private string saved3D = "";
+
+
+    private readonly string surfaceId =
+        "matrix-surface-"
+        + Guid.NewGuid().ToString("N");
+
+
+    private bool AnyRunning =>
+        running2D ||
+        running3D;
+
+
+    // =====================================================
+    // 2D
+    // =====================================================
+
+    private async Task Run2D()
     {
-        if (!draw3D) return;
-        draw3D = false;
+        if (AnyRunning)
+            return;
+
+
+        if (maxN2D < 1 ||
+            step2D < 1)
+        {
+            error =
+                "Параметры 2D должны быть больше нуля.";
+
+            return;
+        }
+
+
+        error = "";
+
+        running2D = true;
+
+        progress2D = 0;
+
+
+        points2D.Clear();
+
+
+        var sizes =
+            BuildValues(
+                maxN2D,
+                step2D);
+
+
+        var random =
+            new Random();
+
+
+        int completed =
+            0;
+
 
         try
         {
-            var data = runPoints
-                .OrderBy(p => p.N)
-                .ThenBy(p => p.Run)
-                .Select(p => new { n = p.N, run = p.Run, timeMs = p.TimeMs })
-                .ToArray();
 
-            await JS.InvokeVoidAsync("algoLabPlotly.drawMatrix3D", plotId, data);
+            foreach (int n in sizes)
+            {
+                currentN =
+                    n;
+
+
+                var a =
+                    GenerateMatrix(
+                        n,
+                        n,
+                        random);
+
+
+                var b =
+                    GenerateMatrix(
+                        n,
+                        n,
+                        random);
+
+
+                double total =
+                    0;
+
+
+                for (int run = 1;
+                     run <= Runs;
+                     run++)
+                {
+                    currentRun =
+                        run;
+
+
+                    var sw =
+                        Stopwatch.StartNew();
+
+
+                    Multiply(
+                        a,
+                        b);
+
+
+                    sw.Stop();
+
+
+                    total +=
+                        sw.Elapsed.TotalMilliseconds;
+
+
+                    progress2D =
+                        (completed
+                         + (double)run / Runs)
+                        * 100
+                        / sizes.Count;
+
+
+                    StateHasChanged();
+
+                    await Task.Yield();
+                }
+
+
+                points2D.Add(
+                    new BenchmarkPoint
+                    {
+                        N = n,
+
+                        TimeMs =
+                            total / Runs
+                    });
+
+
+                completed++;
+            }
+
+
+            approximation2D =
+                ApproximationService.Fit(
+                    points2D,
+                    ComplexityType.Cubic);
+
+
+            progress2D =
+                100;
+
+
+            await SaveService.SaveAsync(
+                slug:
+                    "matrix",
+
+                name:
+                    "Умножение квадратных матриц",
+
+                complexity:
+                    "O(n³)",
+
+                maxN:
+                    maxN2D,
+
+                step:
+                    step2D,
+
+                runs:
+                    Runs,
+
+                points:
+                    points2D,
+
+                approximation:
+                    approximation2D);
         }
         catch (Exception ex)
         {
-            plotError = ex.Message;
+            error =
+                ex.Message;
+        }
+        finally
+        {
+            running2D =
+                false;
+
+
+            currentN =
+                0;
+
+
+            currentRun =
+                0;
+        }
+    }
+
+
+    // =====================================================
+    // 3D
+    // =====================================================
+
+    private async Task Run3D()
+    {
+        if (AnyRunning)
+            return;
+
+
+        if (maxN3D < 1 ||
+            maxM3D < 1 ||
+            stepN3D < 1 ||
+            stepM3D < 1)
+        {
+            error =
+                "Все параметры 3D должны быть больше нуля.";
+
+            return;
+        }
+
+
+        error = "";
+
+        plotError = "";
+
+        saved3D = "";
+
+
+        running3D =
+            true;
+
+
+        progress3D =
+            0;
+
+
+        hasSurface =
+            false;
+
+
+        drawSurface =
+            false;
+
+
+        surfacePoints.Clear();
+
+
+        surfaceN =
+            BuildValues(
+                maxN3D,
+                stepN3D);
+
+
+        surfaceM =
+            BuildValues(
+                maxM3D,
+                stepM3D);
+
+
+        totalPairs =
+            surfaceN.Count
+            * surfaceM.Count;
+
+
+        completedPairs =
+            0;
+
+
+        var rows =
+            new List<double[]>();
+
+
+        var random =
+            new Random();
+
+
+        try
+        {
+
+            foreach (int m
+                     in surfaceM)
+            {
+                var row =
+                    new double[
+                        surfaceN.Count];
+
+
+                for (int nIndex = 0;
+                     nIndex < surfaceN.Count;
+                     nIndex++)
+                {
+                    int n =
+                        surfaceN[nIndex];
+
+
+                    currentN =
+                        n;
+
+
+                    currentM =
+                        m;
+
+
+                    var a =
+                        GenerateMatrix(
+                            n,
+                            m,
+                            random);
+
+
+                    var b =
+                        GenerateMatrix(
+                            m,
+                            n,
+                            random);
+
+
+                    double total =
+                        0;
+
+
+                    for (int run = 1;
+                         run <= Runs;
+                         run++)
+                    {
+                        currentRun =
+                            run;
+
+
+                        var sw =
+                            Stopwatch.StartNew();
+
+
+                        Multiply(
+                            a,
+                            b);
+
+
+                        sw.Stop();
+
+
+                        total +=
+                            sw.Elapsed.TotalMilliseconds;
+
+
+                        progress3D =
+                            (completedPairs
+                             + (double)run / Runs)
+                            * 100
+                            / totalPairs;
+
+
+                        StateHasChanged();
+
+                        await Task.Yield();
+                    }
+
+
+                    double average =
+                        total / Runs;
+
+
+                    row[nIndex] =
+                        average;
+
+
+                    surfacePoints.Add(
+                        new MatrixSurfacePoint
+                        {
+                            N =
+                                n,
+
+                            M =
+                                m,
+
+                            TimeMs =
+                                average
+                        });
+
+
+                    completedPairs++;
+
+
+                    progress3D =
+                        completedPairs
+                        * 100.0
+                        / totalPairs;
+
+
+                    StateHasChanged();
+
+                    await Task.Yield();
+                }
+
+
+                rows.Add(
+                    row);
+            }
+
+
+            surfaceZ =
+                rows.ToArray();
+
+
+            progress3D =
+                100;
+
+
+            hasSurface =
+                true;
+
+
+            drawSurface =
+                true;
+
+
+            StateHasChanged();
+
+            await Task.Yield();
+
+
+            // Отдельная запись истории.
+
+            await SaveService.SaveAsync(
+                slug:
+                    "matrix-3d",
+
+                name:
+                    "Умножение матриц — 3D",
+
+                complexity:
+                    "O(n²·m)",
+
+                maxN:
+                    maxN3D,
+
+                step:
+                    stepN3D,
+
+                runs:
+                    Runs,
+
+                points:
+                    Array.Empty<BenchmarkPoint>(),
+
+                approximation:
+                    new ApproximationResult(),
+
+                surfacePoints:
+                    surfacePoints);
+
+
+            saved3D =
+                "3D-эксперимент сохранён в историю.";
+        }
+        catch (Exception ex)
+        {
+            error =
+                ex.Message;
+        }
+        finally
+        {
+            running3D =
+                false;
+
+
+            currentN =
+                0;
+
+
+            currentM =
+                0;
+
+
+            currentRun =
+                0;
+
+
             StateHasChanged();
         }
     }
 
-    private static double[,] Generate(int n, Random random)
+
+    // =====================================================
+    // PLOTLY
+    // =====================================================
+
+    protected override async Task
+        OnAfterRenderAsync(
+            bool firstRender)
     {
-        var matrix = new double[n, n];
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
-                matrix[i, j] = random.NextDouble() * 100;
-        return matrix;
+        if (!drawSurface)
+            return;
+
+
+        drawSurface =
+            false;
+
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "algoLabPlotly.drawMatrixSurface",
+                surfaceId,
+                surfaceN,
+                surfaceM,
+                surfaceZ);
+        }
+        catch (Exception ex)
+        {
+            plotError =
+                ex.Message;
+
+
+            StateHasChanged();
+        }
     }
 
-    private static double[,] Multiply(double[,] a, double[,] b)
+
+    // =====================================================
+    // MATRIX
+    // =====================================================
+
+    private static double[,]
+        GenerateMatrix(
+            int rows,
+            int columns,
+            Random random)
     {
-        int n = a.GetLength(0);
-        var c = new double[n, n];
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
+        var result =
+            new double[
+                rows,
+                columns];
+
+
+        for (int i = 0;
+             i < rows;
+             i++)
+        {
+            for (int j = 0;
+                 j < columns;
+                 j++)
             {
-                double sum = 0;
-                for (int k = 0; k < n; k++) sum += a[i, k] * b[k, j];
-                c[i, j] = sum;
+                result[i, j] =
+                    random.NextDouble()
+                    * 100;
             }
-        return c;
+        }
+
+
+        return result;
+    }
+
+
+    private static double[,]
+        Multiply(
+            double[,] a,
+            double[,] b)
+    {
+        int rows =
+            a.GetLength(0);
+
+
+        int common =
+            a.GetLength(1);
+
+
+        if (common !=
+            b.GetLength(0))
+        {
+            throw new ArgumentException(
+                "Несовместимые размеры матриц.");
+        }
+
+
+        int columns =
+            b.GetLength(1);
+
+
+        var result =
+            new double[
+                rows,
+                columns];
+
+
+        for (int i = 0;
+             i < rows;
+             i++)
+        {
+            for (int j = 0;
+                 j < columns;
+                 j++)
+            {
+                double sum =
+                    0;
+
+
+                for (int k = 0;
+                     k < common;
+                     k++)
+                {
+                    sum +=
+                        a[i, k]
+                        *
+                        b[k, j];
+                }
+
+
+                result[i, j] =
+                    sum;
+            }
+        }
+
+
+        return result;
+    }
+
+
+    // =====================================================
+    // VALUES
+    // =====================================================
+
+    private static List<int>
+        BuildValues(
+            int maximum,
+            int step)
+    {
+        var result =
+            new List<int>();
+
+
+        for (int value = 1;
+             value <= maximum;
+             value += step)
+        {
+            result.Add(
+                value);
+        }
+
+
+        if (result.Count == 0 ||
+            result[^1] != maximum)
+        {
+            result.Add(
+                maximum);
+        }
+
+
+        return result;
+    }
+
+
+    // =====================================================
+    // CSS
+    // =====================================================
+
+    private string Progress2DStyle =>
+        ProgressStyle(
+            progress2D);
+
+
+    private string Progress3DStyle =>
+        ProgressStyle(
+            progress3D);
+
+
+    private static string ProgressStyle(
+        double value)
+    {
+        string width =
+            value.ToString(
+                "F1",
+                System.Globalization
+                    .CultureInfo
+                    .InvariantCulture);
+
+
+        return $"width:{width}%;";
     }
 }
