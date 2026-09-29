@@ -158,7 +158,7 @@ public static class AlgorithmRegistry
             Complexity = "O(n log n)",
             ComplexityType = ComplexityType.Linearithmic,
             Slug = "huffman",
-            Category = "Труднорешаемые задачи"
+            Category = "Жадные алгоритмы"
         }
     ];
 

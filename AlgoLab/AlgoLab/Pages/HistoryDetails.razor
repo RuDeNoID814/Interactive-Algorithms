@@ -206,7 +206,7 @@ else if (experiment is not null)
                                  Title="@GetGraphTitle()"
                                  ApproximationName="@GetApproximationName()"
                                  XAxisTitle="@GetXAxisTitle()"
-                                 YAxisTitle="Среднее время выполнения, мс"
+                                 YAxisTitle="@GetYAxisTitle()"
                                  Height="520" />
 
             </div>
@@ -342,11 +342,11 @@ else if (experiment is not null)
                                 </th>
 
                                 <th>
-                                    Среднее время, мс
+                                    @GetAverageColumnHeader()
                                 </th>
 
                                 <th>
-                                    Аппроксимация, мс
+                                    @GetApproxColumnHeader()
                                 </th>
 
                             </tr>
@@ -710,6 +710,29 @@ else if (experiment is not null)
 
         return "Размер входных данных n";
     }
+
+
+    private static readonly HashSet<string> StepCountSlugs =
+        new() { "power-simple", "power-recursive", "power-fast" };
+
+    private bool IsStepCountExperiment =>
+        experiment?.AlgorithmSlug is { } slug
+        && StepCountSlugs.Contains(slug);
+
+    private string GetYAxisTitle() =>
+        IsStepCountExperiment
+            ? "Количество шагов"
+            : "Среднее время выполнения, мс";
+
+    private string GetAverageColumnHeader() =>
+        IsStepCountExperiment
+            ? "Среднее число шагов"
+            : "Среднее время, мс";
+
+    private string GetApproxColumnHeader() =>
+        IsStepCountExperiment
+            ? "Аппроксимация, шаги"
+            : "Аппроксимация, мс";
 
 
     private string GetApproximationName()

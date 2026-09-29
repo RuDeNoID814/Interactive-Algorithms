@@ -161,10 +161,8 @@
                 {
                     currentRun = run;
 
-                    var data = (int[])original.Clone();
-
                     var sw = Stopwatch.StartNew();
-                    HuffmanCore(data);
+                    HuffmanCore(original);
                     sw.Stop();
 
                     total += sw.Elapsed.TotalMilliseconds;
@@ -223,10 +221,8 @@
     /// </summary>
     private static long HuffmanCore(int[] frequencies)
     {
-        var pq = new PriorityQueue<HuffmanNode, long>();
-
-        foreach (var f in frequencies)
-            pq.Enqueue(new HuffmanNode { Frequency = f }, f);
+        var pq = new PriorityQueue<HuffmanNode, long>(
+            frequencies.Select(f => (new HuffmanNode { Frequency = f }, (long)f)));
 
         while (pq.Count > 1)
         {

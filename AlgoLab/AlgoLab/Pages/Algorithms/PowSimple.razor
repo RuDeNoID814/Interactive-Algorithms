@@ -108,9 +108,6 @@
     private List<BenchmarkPoint> points = new();
     private ApproximationResult approximation = new();
 
-    private const long BaseX = 2;
-    private const long Mod = 1_000_000_007; // защита от переполнения
-
     private async Task Run()
     {
         if (running) return;
@@ -136,7 +133,7 @@
             {
                 currentN = n;
 
-                long steps = CountSteps(BaseX, n);
+                long steps = CountSteps(n);
 
                 points.Add(new BenchmarkPoint
                 {
@@ -179,16 +176,12 @@
         }
     }
 
-    private static long CountSteps(long x, int n)
+    private static long CountSteps(int n)
     {
-        long result = 1;
         long steps = 0;
 
         for (int i = 0; i < n; i++)
-        {
-            result = (result * x) % Mod;
-            steps++;
-        }
+            steps++; // одно умножение x *= x
 
         return steps;
     }

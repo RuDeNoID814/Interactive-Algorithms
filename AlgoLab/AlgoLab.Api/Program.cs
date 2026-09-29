@@ -59,8 +59,6 @@ using (var scope = app.Services.CreateScope())
 // HTTP PIPELINE
 // =============================================
 
-app.UseHttpsRedirection();
-
 app.UseCors("BlazorClient");
 
 app.MapControllers();

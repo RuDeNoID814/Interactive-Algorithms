@@ -31,7 +31,7 @@ builder.Services.AddScoped(
     {
         BaseAddress =
             new Uri(
-                "https://localhost:7182/")
+                "http://localhost:5225/")
     });
 
 

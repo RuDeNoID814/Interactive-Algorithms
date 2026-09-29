@@ -118,9 +118,6 @@
     private List<BenchmarkPoint> points = new();
     private ApproximationResult approximation = new();
 
-    private const long BaseX = 2;
-    private const long Mod = 1_000_000_007;
-
     private async Task Run()
     {
         if (running) return;
@@ -147,7 +144,7 @@
                 currentN = n;
 
                 long steps = 0;
-                Power(BaseX, n, ref steps);
+                CountSteps(n, ref steps);
 
                 points.Add(new BenchmarkPoint
                 {
@@ -190,14 +187,13 @@
         }
     }
 
-    private static long Power(long x, int n, ref long steps)
+    private static void CountSteps(int n, ref long steps)
     {
         if (n == 0)
-            return 1;
+            return;
 
         steps++; // один рекурсивный вызов = одно умножение
-        long inner = Power(x, n - 1, ref steps);
-        return (x * inner) % Mod;
+        CountSteps(n - 1, ref steps);
     }
 
     private static List<int> BuildSizes(int max, int step)
