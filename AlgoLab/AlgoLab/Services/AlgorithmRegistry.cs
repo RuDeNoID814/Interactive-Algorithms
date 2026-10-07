@@ -99,9 +99,9 @@ public static class AlgorithmRegistry
         new()
         {
             Name = "Степень рекурсивно",
-            Description = "Рекурсивное быстрое возведение",
-            Complexity = "O(log n)",
-            ComplexityType = ComplexityType.Logarithmic,
+            Description = "Рекурсивное последовательное возведение",
+            Complexity = "O(n)",
+            ComplexityType = ComplexityType.Linear,
             Slug = "pow-recursive",
             Category = "Степень"
         },

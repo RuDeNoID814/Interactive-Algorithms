@@ -1,6 +1,49 @@
 ﻿window.algoLabPlotly = {
 
     // =====================================================
+    // Автовыбор единицы времени (мс / мкс / нс), чтобы подписи
+    // оси и реальные деления Plotly никогда не расходились
+    // (раньше заголовок жёстко говорил "мс", а Plotly сам
+    // переключал деления на μ без нашего ведома).
+    // =====================================================
+    _pickTimeUnit: function (allValues) {
+        const abs = allValues
+            .map(Math.abs)
+            .filter(v => v > 0);
+
+        const maxAbs = abs.length
+            ? Math.max(...abs)
+            : 0;
+
+        if (maxAbs === 0 || maxAbs >= 1) {
+            return { factor: 1, suffix: "мс" };
+        }
+        if (maxAbs >= 0.001) {
+            return { factor: 1000, suffix: "мкс" };
+        }
+        return { factor: 1000000, suffix: "нс" };
+    },
+
+    // Общий стиль осей/сетки/шрифта — единообразно на всех графиках.
+    _baseAxisStyle: function (titleText) {
+        return {
+            title: { text: titleText, font: { size: 14 } },
+            gridcolor: "#e5e7eb",
+            zerolinecolor: "#cbd5e1",
+            linecolor: "#cbd5e1",
+            tickfont: { size: 12 },
+            exponentformat: "none",
+            separatethousands: true
+        };
+    },
+
+    _baseFont: {
+        family: "Segoe UI, -apple-system, Roboto, Arial, sans-serif",
+        size: 13,
+        color: "#1f2937"
+    },
+
+    // =====================================================
     // 2D COMPLEXITY
     // =====================================================
 
@@ -32,15 +75,47 @@
         const expX =
             experimental.map(p => Number(p.n));
 
-        const expY =
+        const expYRaw =
             experimental.map(p => Number(p.time));
 
 
         const theoryX =
             approximation.map(p => Number(p.n));
 
-        const theoryY =
+        const theoryYRaw =
             approximation.map(p => Number(p.time));
+
+
+        // Единицы времени подбираем только для реальных замеров
+        // времени (заголовок содержит "мс"); для графиков "шагов"
+        // (pow-алгоритмы) ничего не трогаем — там своя единица.
+        const yTitleRaw =
+            options.yTitle
+            || "Время выполнения, мс";
+
+        const isTimeAxis =
+            yTitleRaw.includes("мс");
+
+        const unit =
+            isTimeAxis
+                ? this._pickTimeUnit([...expYRaw, ...theoryYRaw])
+                : { factor: 1, suffix: null };
+
+        const expY =
+            expYRaw.map(v => v * unit.factor);
+
+        const theoryY =
+            theoryYRaw.map(v => v * unit.factor);
+
+        const yTitle =
+            isTimeAxis
+                ? yTitleRaw.replace(/,?\s*мс\s*$/u, `, ${unit.suffix}`)
+                : yTitleRaw;
+
+        const hoverSuffix =
+            isTimeAxis
+                ? ` ${unit.suffix}`
+                : "";
 
 
         const traces = [
@@ -50,19 +125,26 @@
                 y: expY,
 
                 type: "scatter",
-                mode: "lines+markers",
+                mode: expX.length > 150 ? "lines" : "lines+markers",
 
                 name: "Эксперимент",
 
                 line: {
                     color: "#2563eb",
-                    width: 3
+                    width: 2.5,
+                    shape: "linear"
                 },
 
                 marker: {
                     color: "#2563eb",
-                    size: 6
-                }
+                    size: 5,
+                    line: { color: "#ffffff", width: 1 }
+                },
+
+                hovertemplate:
+                    "n = %{x:,.0f}<br>" +
+                    `Время = %{y:.4f}${hoverSuffix}` +
+                    "<extra>Эксперимент</extra>"
             },
 
             {
@@ -78,9 +160,14 @@
 
                 line: {
                     color: "#ef4444",
-                    width: 4,
+                    width: 3,
                     dash: "dash"
-                }
+                },
+
+                hovertemplate:
+                    "n = %{x:,.0f}<br>" +
+                    `Теория = %{y:.4f}${hoverSuffix}` +
+                    "<extra>Аппроксимация</extra>"
             }
         ];
 
@@ -92,43 +179,41 @@
                 title: {
                     text:
                         options.title
-                        || "Временная сложность"
+                        || "Временная сложность",
+                    font: { size: 17 }
                 },
 
                 height:
                     options.height
                     || 500,
 
-                xaxis: {
-                    title: {
-                        text:
-                            options.xTitle
-                            || "Размер входных данных n"
-                    },
+                font: this._baseFont,
 
-                    range: [
-                        Math.min(...expX),
-                        Math.max(...expX)
-                    ],
+                plot_bgcolor: "#fcfcfd",
+                paper_bgcolor: "#ffffff",
 
-                    autorange: false
-                },
+                xaxis: Object.assign(
+                    this._baseAxisStyle(
+                        options.xTitle
+                        || "Размер входных данных n"),
+                    {
+                        range: [
+                            Math.min(...expX),
+                            Math.max(...expX)
+                        ],
+                        autorange: false
+                    }),
 
-                yaxis: {
-                    title: {
-                        text:
-                            options.yTitle
-                            || "Время выполнения, мс"
-                    },
-
-                    rangemode: "tozero"
-                },
+                yaxis: Object.assign(
+                    this._baseAxisStyle(yTitle),
+                    { rangemode: "tozero" }),
 
                 legend: {
                     orientation: "h",
                     x: 0.5,
                     xanchor: "center",
-                    y: -0.2
+                    y: -0.2,
+                    font: { size: 13 }
                 },
 
                 margin: {
@@ -138,12 +223,18 @@
                     b: 100
                 },
 
-                hovermode: "x unified"
+                hovermode: "x unified",
+                hoverlabel: {
+                    bgcolor: "#ffffff",
+                    bordercolor: "#cbd5e1",
+                    font: { size: 12 }
+                }
             },
 
             {
                 responsive: true,
-                displaylogo: false
+                displaylogo: false,
+                scrollZoom: true
             }
         );
     },

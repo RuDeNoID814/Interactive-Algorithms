@@ -87,6 +87,7 @@
 
 @code {
     private const int Repeats = 100;
+    private const double MinMeasureMs = 2.0;
 
     protected override string AlgorithmSlug => "horner";
     protected override string AlgorithmName => "Метод Горнера";
@@ -104,17 +105,26 @@
         foreach (int n in sizes)
         {
             int[] v = new int[n];
-            for (int i = 0; i < n; i++) v[i] = rng.Next(10000);
+            for (int i = 0; i < n; i++)
+            {
+                v[i] = rng.Next(10000);
+                if ((i & 0xFFFFF) == 0) await Task.Yield();
+            }
 
             double total = 0;
 
             for (int run = 1; run <= runs; run++)
             {
                 var sw = Stopwatch.StartNew();
-                for (int j = 0; j < Repeats; j++) Algo(v);
+                int reps = 0;
+                while (reps < Repeats && sw.Elapsed.TotalMilliseconds < MinMeasureMs)
+                {
+                    Algo(v);
+                    reps++;
+                }
                 sw.Stop();
 
-                total += sw.Elapsed.TotalMilliseconds / Repeats;
+                total += sw.Elapsed.TotalMilliseconds / reps;
                 double progress = (completed + (double)run / runs) * 100 / sizes.Count;
                 updateProgress(n, run, progress);
                 await Task.Yield();
