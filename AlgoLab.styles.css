@@ -136,14 +136,24 @@ main[b-7xc3lg7zsm] {
     opacity: 0.8;
 }
 
-.lab-entry[b-esnjq3v1c8] {
+[b-esnjq3v1c8] .lab-entry {
     display: flex;
     align-items: center;
     gap: 0.7rem;
     padding: 0.5rem 0.75rem;
+    border-radius: 8px;
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--ink);
+    text-decoration: none;
+}
+
+[b-esnjq3v1c8] .lab-entry:hover {
+    background: var(--surface-hover);
+}
+
+[b-esnjq3v1c8] .lab-entry.active .lab-marker {
+    background: var(--accent);
 }
 
 .lab-marker[b-esnjq3v1c8] {
