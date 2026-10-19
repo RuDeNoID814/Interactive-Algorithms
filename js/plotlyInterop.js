@@ -1,0 +1,502 @@
+﻿window.algoLabPlotly = {
+
+    // =====================================================
+    // Автовыбор единицы времени (мс / мкс / нс), чтобы подписи
+    // оси и реальные деления Plotly никогда не расходились
+    // (раньше заголовок жёстко говорил "мс", а Plotly сам
+    // переключал деления на μ без нашего ведома).
+    // =====================================================
+    _pickTimeUnit: function (allValues) {
+        const abs = allValues
+            .map(Math.abs)
+            .filter(v => v > 0);
+
+        const maxAbs = abs.length
+            ? Math.max(...abs)
+            : 0;
+
+        if (maxAbs === 0 || maxAbs >= 1) {
+            return { factor: 1, suffix: "мс" };
+        }
+        if (maxAbs >= 0.001) {
+            return { factor: 1000, suffix: "мкс" };
+        }
+        return { factor: 1000000, suffix: "нс" };
+    },
+
+    // Общий стиль осей/сетки/шрифта — единообразно на всех графиках.
+    _baseAxisStyle: function (titleText) {
+        return {
+            title: { text: titleText, font: { size: 14 } },
+            gridcolor: "#e5e7eb",
+            zerolinecolor: "#cbd5e1",
+            linecolor: "#cbd5e1",
+            tickfont: { size: 12 },
+            exponentformat: "none",
+            separatethousands: true
+        };
+    },
+
+    _baseFont: {
+        family: "Segoe UI, -apple-system, Roboto, Arial, sans-serif",
+        size: 13,
+        color: "#1f2937"
+    },
+
+    // =====================================================
+    // 2D COMPLEXITY
+    // =====================================================
+
+    drawComplexityChart: function (
+        elementId,
+        experimental,
+        approximation,
+        options) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (!element) {
+            throw new Error(
+                "Не найден элемент графика: " + elementId
+            );
+        }
+
+        if (typeof Plotly === "undefined") {
+            throw new Error("Plotly не загружен.");
+        }
+
+        if (!experimental ||
+            experimental.length === 0) {
+            return;
+        }
+
+
+        const expX =
+            experimental.map(p => Number(p.n));
+
+        const expYRaw =
+            experimental.map(p => Number(p.time));
+
+
+        const theoryX =
+            approximation.map(p => Number(p.n));
+
+        const theoryYRaw =
+            approximation.map(p => Number(p.time));
+
+
+        // Единицы времени подбираем только для реальных замеров
+        // времени (заголовок содержит "мс"); для графиков "шагов"
+        // (pow-алгоритмы) ничего не трогаем — там своя единица.
+        const yTitleRaw =
+            options.yTitle
+            || "Время выполнения, мс";
+
+        const isTimeAxis =
+            yTitleRaw.includes("мс");
+
+        const unit =
+            isTimeAxis
+                ? this._pickTimeUnit([...expYRaw, ...theoryYRaw])
+                : { factor: 1, suffix: null };
+
+        const expY =
+            expYRaw.map(v => v * unit.factor);
+
+        const theoryY =
+            theoryYRaw.map(v => v * unit.factor);
+
+        const yTitle =
+            isTimeAxis
+                ? yTitleRaw.replace(/,?\s*мс\s*$/u, `, ${unit.suffix}`)
+                : yTitleRaw;
+
+        const hoverSuffix =
+            isTimeAxis
+                ? ` ${unit.suffix}`
+                : "";
+
+
+        const traces = [
+
+            {
+                x: expX,
+                y: expY,
+
+                type: "scatter",
+                mode: expX.length > 150 ? "lines" : "lines+markers",
+
+                name: "Эксперимент",
+
+                line: {
+                    color: "#2563eb",
+                    width: 2.5,
+                    shape: "linear"
+                },
+
+                marker: {
+                    color: "#2563eb",
+                    size: 5,
+                    line: { color: "#ffffff", width: 1 }
+                },
+
+                hovertemplate:
+                    "n = %{x:,.0f}<br>" +
+                    `Время = %{y:.4f}${hoverSuffix}` +
+                    "<extra>Эксперимент</extra>"
+            },
+
+            {
+                x: theoryX,
+                y: theoryY,
+
+                type: "scatter",
+                mode: "lines",
+
+                name:
+                    options.approximationName
+                    || "Аппроксимация",
+
+                line: {
+                    color: "#ef4444",
+                    width: 3,
+                    dash: "dash"
+                },
+
+                hovertemplate:
+                    "n = %{x:,.0f}<br>" +
+                    `Теория = %{y:.4f}${hoverSuffix}` +
+                    "<extra>Аппроксимация</extra>"
+            }
+        ];
+
+
+        Plotly.react(
+            element,
+            traces,
+            {
+                title: {
+                    text:
+                        options.title
+                        || "Временная сложность",
+                    font: { size: 17 }
+                },
+
+                height:
+                    options.height
+                    || 500,
+
+                font: this._baseFont,
+
+                plot_bgcolor: "#fcfcfd",
+                paper_bgcolor: "#ffffff",
+
+                xaxis: Object.assign(
+                    this._baseAxisStyle(
+                        options.xTitle
+                        || "Размер входных данных n"),
+                    {
+                        range: [
+                            Math.min(...expX),
+                            Math.max(...expX)
+                        ],
+                        autorange: false
+                    }),
+
+                yaxis: Object.assign(
+                    this._baseAxisStyle(yTitle),
+                    { rangemode: "tozero" }),
+
+                legend: {
+                    orientation: "h",
+                    x: 0.5,
+                    xanchor: "center",
+                    y: -0.2,
+                    font: { size: 13 }
+                },
+
+                margin: {
+                    l: 90,
+                    r: 40,
+                    t: 70,
+                    b: 100
+                },
+
+                hovermode: "x unified",
+                hoverlabel: {
+                    bgcolor: "#ffffff",
+                    bordercolor: "#cbd5e1",
+                    font: { size: 12 }
+                }
+            },
+
+            {
+                responsive: true,
+                displaylogo: false,
+                scrollZoom: true
+            }
+        );
+    },
+
+
+    // =====================================================
+    // MATRIX SURFACE
+    // =====================================================
+
+    drawMatrixSurface: function (
+        elementId,
+        nValues,
+        mValues,
+        zValues) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (!element) {
+            throw new Error(
+                "Не найден элемент 3D-графика."
+            );
+        }
+
+        if (typeof Plotly === "undefined") {
+            throw new Error("Plotly не загружен.");
+        }
+
+
+        const trace = {
+
+            x: nValues,
+            y: mValues,
+            z: zValues,
+
+            type: "surface",
+
+            colorscale: "Viridis",
+
+            colorbar: {
+                title: "Время, мс"
+            },
+
+            hovertemplate:
+                "n = %{x}<br>" +
+                "m = %{y}<br>" +
+                "Время = %{z:.6f} мс" +
+                "<extra></extra>"
+        };
+
+
+        Plotly.react(
+            element,
+            [trace],
+
+            {
+                title: {
+                    text:
+                        "3D-поверхность времени умножения матриц"
+                },
+
+                height: 650,
+
+                scene: {
+
+                    xaxis: {
+                        title: {
+                            text: "Размер n"
+                        }
+                    },
+
+                    yaxis: {
+                        title: {
+                            text: "Размер m"
+                        }
+                    },
+
+                    zaxis: {
+                        title: {
+                            text: "Среднее время, мс"
+                        }
+                    }
+                },
+
+                margin: {
+                    l: 0,
+                    r: 0,
+                    b: 0,
+                    t: 70
+                }
+            },
+
+            {
+                responsive: true,
+                displaylogo: false
+            }
+        );
+    },
+
+
+    // =====================================================
+    // HISTORY COMPARISON
+    // =====================================================
+
+    drawHistoryComparison: function (
+        elementId,
+        series) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (!element) {
+            throw new Error(
+                "Не найден элемент графика сравнения."
+            );
+        }
+
+        if (typeof Plotly === "undefined") {
+            throw new Error("Plotly не загружен.");
+        }
+
+        if (!series ||
+            series.length === 0) {
+            return;
+        }
+
+
+        const colors = [
+            "#2563eb",
+            "#ef4444",
+            "#22c55e",
+            "#f59e0b",
+            "#8b5cf6",
+            "#06b6d4",
+            "#ec4899",
+            "#64748b",
+            "#84cc16",
+            "#f97316"
+        ];
+
+
+        const traces =
+            series.map(
+                (item, index) => {
+
+                    return {
+
+                        x:
+                            item.points.map(
+                                p => Number(p.n)),
+
+                        y:
+                            item.points.map(
+                                p => Number(p.timeMs)),
+
+                        type:
+                            "scatter",
+
+                        mode:
+                            "lines+markers",
+
+                        name:
+                            item.name,
+
+                        line: {
+                            width: 3,
+                            color:
+                                colors[
+                                index
+                                % colors.length]
+                        },
+
+                        marker: {
+                            size: 6,
+                            color:
+                                colors[
+                                index
+                                % colors.length]
+                        },
+
+                        hovertemplate:
+                            "n = %{x}<br>" +
+                            "Время = %{y:.6f} мс" +
+                            "<extra>" +
+                            item.name +
+                            "</extra>"
+                    };
+                });
+
+
+        Plotly.react(
+            element,
+            traces,
+
+            {
+                title: {
+                    text:
+                        "Сравнение сохранённых экспериментов"
+                },
+
+                height: 600,
+
+                xaxis: {
+                    title: {
+                        text:
+                            "Размер входных данных n"
+                    }
+                },
+
+                yaxis: {
+                    title: {
+                        text:
+                            "Среднее время выполнения, мс"
+                    },
+
+                    rangemode:
+                        "tozero"
+                },
+
+                legend: {
+                    orientation:
+                        "h",
+
+                    x:
+                        0.5,
+
+                    xanchor:
+                        "center",
+
+                    y:
+                        -0.2
+                },
+
+                margin: {
+                    l: 90,
+                    r: 40,
+                    t: 70,
+                    b: 120
+                },
+
+                hovermode:
+                    "closest"
+            },
+
+            {
+                responsive: true,
+                displaylogo: false,
+                scrollZoom: true
+            }
+        );
+    },
+
+
+    purge: function (elementId) {
+
+        const element =
+            document.getElementById(elementId);
+
+        if (element &&
+            typeof Plotly !== "undefined") {
+
+            Plotly.purge(element);
+        }
+    }
+};

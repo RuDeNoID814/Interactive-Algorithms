@@ -1,0 +1,208 @@
+/* /Layout/MainLayout.razor.rz.scp.css */
+.page[b-7xc3lg7zsm] {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+main[b-7xc3lg7zsm] {
+    flex: 1;
+}
+
+.sidebar[b-7xc3lg7zsm] {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row[b-7xc3lg7zsm] {
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
+    justify-content: flex-start;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.top-row .crumbs[b-7xc3lg7zsm] {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+@media (max-width: 640.98px) {
+    .top-row[b-7xc3lg7zsm] {
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 641px) {
+    .page[b-7xc3lg7zsm] {
+        flex-direction: row;
+    }
+
+    .sidebar[b-7xc3lg7zsm] {
+        width: 232px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+
+    .top-row[b-7xc3lg7zsm] {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .top-row[b-7xc3lg7zsm], article[b-7xc3lg7zsm] {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+/* /Layout/NavMenu.razor.rz.scp.css */
+.brand[b-esnjq3v1c8] {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1.5rem 1.1rem 1.25rem;
+}
+
+.brand-mark[b-esnjq3v1c8] {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+.brand-name[b-esnjq3v1c8] {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--ink);
+}
+
+.side-nav[b-esnjq3v1c8] {
+    padding: 0 1.1rem;
+}
+
+.nav-section[b-esnjq3v1c8] {
+    margin-bottom: 1.5rem;
+}
+
+.nav-section-title[b-esnjq3v1c8] {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+    padding: 0 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+[b-esnjq3v1c8] .side-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+[b-esnjq3v1c8] .side-link:hover {
+    background: var(--surface-hover);
+    color: var(--ink);
+}
+
+[b-esnjq3v1c8] .side-link.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.side-icon[b-esnjq3v1c8] {
+    width: 18px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.lab-entry[b-esnjq3v1c8] {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.lab-marker[b-esnjq3v1c8] {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex-shrink: 0;
+}
+
+.lab-entry-active .lab-marker[b-esnjq3v1c8] {
+    background: var(--accent);
+}
+
+.lab-entry-soon[b-esnjq3v1c8] {
+    color: var(--ink-faint);
+    font-weight: 500;
+    cursor: default;
+}
+
+.lab-subsections[b-esnjq3v1c8] {
+    display: flex;
+    flex-direction: column;
+    padding-left: 1.85rem;
+    margin-bottom: 0.3rem;
+}
+
+[b-esnjq3v1c8] .lab-sub-link {
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+}
+
+[b-esnjq3v1c8] .lab-sub-link:hover {
+    background: var(--surface-hover);
+    color: var(--ink);
+}
+
+[b-esnjq3v1c8] .lab-sub-link.active {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.side-note[b-esnjq3v1c8] {
+    margin-top: auto;
+    padding: 1rem 1.3rem 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.side-note-course[b-esnjq3v1c8] {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.2rem;
+}
+
+.side-note-purpose[b-esnjq3v1c8] {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+}
