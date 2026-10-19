@@ -1,109 +1,277 @@
 @using AlgoLab.Models
+@using System.Globalization
+
+@implements IDisposable
 
 <h3>Ханойская башня</h3>
 
 <p>
     Три стержня, N колец на первом. Нужно перенести все кольца на третий стержень, не кладя большее кольцо на меньшее.
-    Решение рекурсивное: чтобы перенести n колец с A на C, сначала переносим n−1 колец с A на B,
-    затем большое кольцо с A на C напрямую, затем n−1 колец с B на C.
 </p>
 
 <div class="alert alert-info">
-    <strong>Сложность:</strong> O(2ⁿ) — число ходов ровно 2ⁿ−1 (для 8 колец это 255 ходов)<br />
+    <strong>Сложность:</strong> O(2ⁿ) — число ходов ровно 2ⁿ−1 <br />
     <strong>Глубина рекурсии:</strong> O(n)
 </div>
 
 <hr />
 
 <div class="row align-items-end mb-3">
-    <div class="col-md-3 mb-2">
+    <div class="col-md-4 mb-2">
         <label>Число дисков: @DiskCount</label>
-        <input type="range" min="1" max="8" class="form-range"
-               @bind="DiskCount" @bind:event="oninput" disabled="@IsAutoPlaying" />
+        <input type="range" min="3" max="8" class="form-range"
+               value="@DiskCount" @oninput="OnDiskCountChanged" />
     </div>
-    <div class="col-md-9 mb-2">
-        <button class="btn btn-primary me-2" @onclick="InitTowers" disabled="@IsAutoPlaying">Создать башню</button>
-        <button class="btn btn-outline-primary me-2" @onclick="Solve" disabled="@(IsAutoPlaying || Moves.Count > 0)">Найти решение</button>
-        <button class="btn btn-outline-secondary me-2" @onclick="StepOnce" disabled="@(!CanStep)">Следующий ход</button>
-        <button class="btn btn-outline-secondary" @onclick="AutoPlay" disabled="@(!CanStep)">Автопрохождение</button>
+    <div class="col-md-4 mb-2">
+        <label>Скорость: @Speed×</label>
+        <input type="range" min="1" max="10" class="form-range"
+               value="@Speed" @oninput="OnSpeedChanged" />
+    </div>
+    <div class="col-md-4 mb-2 text-end">
+        <button class="btn btn-primary me-2" @onclick="StartPlay" disabled="@IsPlaying">Запустить</button>
+        <button class="btn btn-warning" @onclick="PausePlay" disabled="@(!IsPlaying)">Пауза</button>
     </div>
 </div>
 
-<div class="hanoi-canvas-wrap">
-    <svg viewBox="0 0 600 300" class="hanoi-canvas">
-        @for (int t = 0; t < 3; t++)
-        {
-            var x = TowerX(t);
-            <rect class="hanoi-peg" x="@(x - 3)" y="60" width="6" height="200" />
-            <rect class="hanoi-base" x="@(x - 70)" y="258" width="140" height="8" />
-            <text><tspan class="hanoi-peg-label" x="@x" y="285">@(((char)('A' + t)))</tspan></text>
-        }
+<div class="row">
+    <!-- Визуализация -->
+    <div class="col-md-7">
+        <div class="hanoi-canvas-wrap" style="background: var(--bs-tertiary-bg); border-radius: 8px; padding: 10px;">
+            <svg viewBox="0 0 600 300" style="width: 100%; height: auto;">
+                <!-- Стержни -->
+                @for (int t = 0; t < 3; t++)
+                {
+                    var x = TowerX(t);
+                    <rect class="hanoi-peg" x="@F(x - 4)" y="50" width="8" height="210" fill="#888" rx="4" />
+                    <rect class="hanoi-base" x="@F(x - 90)" y="258" width="180" height="10" rx="5" fill="#555" />
+                    <text><tspan class="hanoi-peg-label" x="@F(x)" y="285" text-anchor="middle" font-weight="bold" font-size="18" fill="#333">@(((char)('A' + t)))</tspan></text>
+                }
 
-        @foreach (var disk in GetDiskViews())
-        {
-            <rect @key="disk.Size" class="hanoi-disk" x="@disk.X" y="@disk.Y" width="@disk.Width" height="20" rx="4" fill="@disk.Color" />
-            <text><tspan @key="@($"label{disk.Size}")" class="hanoi-disk-label" x="@(disk.X + disk.Width / 2)" y="@(disk.Y + 14)">@disk.Size</tspan></text>
-        }
-    </svg>
+                <!-- Статичные диски -->
+                @foreach (var disk in GetDiskViews())
+                {
+                    <g @key="disk.Size" transform="translate(@F(disk.X), @F(disk.Y))">
+                        <rect class="hanoi-disk" x="@F(-disk.Width / 2)" y="0" width="@F(disk.Width)" height="20" rx="4" fill="@disk.Color" stroke="#00000044" stroke-width="1" />
+                        <text>
+                            <tspan class="hanoi-disk-label" x="0" y="10" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#fff" font-weight="bold">@disk.Size</tspan>
+                        </text>
+                    </g>
+                }
+
+                <!-- Анимируемый (летящий) диск -->
+                @if (IsMovingDisk)
+                {
+                    var w = DiskWidthFor(MovingDiskSize);
+                    <g transform="translate(@F(AnimX), @F(AnimY))">
+                        <rect class="hanoi-disk" x="@F(-w / 2)" y="0" width="@F(w)" height="20" rx="4" fill="@Colors[(MovingDiskSize - 1) % Colors.Length]" stroke="#00000044" stroke-width="1" />
+                        <text>
+                            <tspan class="hanoi-disk-label" x="0" y="10" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#fff" font-weight="bold">@MovingDiskSize</tspan>
+                        </text>
+                    </g>
+                }
+            </svg>
+        </div>
+        <p class="text-muted small mt-2">
+            Ходов сделано: @CurrentStep из @Moves.Count
+        </p>
+    </div>
+
+    <!-- Список ходов -->
+    <div class="col-md-5" style="max-height: 380px; overflow-y: auto;">
+        <h5>История ходов</h5>
+        <div class="list-group">
+            <button type="button" class="list-group-item list-group-item-action @(CurrentStep == 0 ? "active" : "")"
+                    @onclick="() => GoToStep(0)">
+                Начальное положение
+            </button>
+            @for (int i = 0; i < Moves.Count; i++)
+            {
+                var move = Moves[i];
+                var stepNum = i + 1;
+                var isActive = CurrentStep == stepNum;
+                <button type="button" class="list-group-item list-group-item-action @(isActive ? "active" : "")"
+                        @onclick="() => GoToStep(stepNum)">
+                    Шаг @stepNum: Диск @move.Disk (@((char)('A' + move.From)) → @((char)('A' + move.To)))
+                </button>
+            }
+        </div>
+    </div>
 </div>
-
-<p class="text-muted small mt-2">
-    Ходов: @CurrentStep из @Moves.Count @(Moves.Count > 0 ? $"(2^{DiskCount}-1 = {(1 << DiskCount) - 1})" : "")
-</p>
 
 @code {
     private int DiskCount { get; set; } = 4;
+    private int Speed { get; set; } = 5;
+
     private List<List<int>> Towers { get; set; } = new();
     private List<Move> Moves { get; set; } = new();
-    private int CurrentStep { get; set; }
-    private bool IsAutoPlaying { get; set; }
+    private int CurrentStep { get; set; } = 0;
 
-    private bool CanStep => Moves.Count > 0 && CurrentStep < Moves.Count && !IsAutoPlaying;
+    private bool IsPlaying { get; set; }
+
+    // Состояние для анимации
+    private bool IsMovingDisk { get; set; }
+    private int MovingDiskSize { get; set; }
+    private double AnimX { get; set; }
+    private double AnimY { get; set; }
+
+    private CancellationTokenSource? _cts;
 
     private const int DiskHeight = 20;
-    private const int PegSpacing = 150;
+    private const int PegSpacing = 180;
     private const int BaseY = 258;
-    private const int MinDiskWidth = 30;
-    private const int MaxDiskWidth = 140;
+    private const int MinDiskWidth = 40;
+    private const int MaxDiskWidth = 160;
+    private const int TopY = 20; // Высота подъема диска
 
     private static readonly string[] Colors =
         { "#ef4444", "#f97316", "#eab308", "#22c55e", "#2563eb", "#6366f1", "#a855f7", "#ec4899" };
 
-    protected override void OnInitialized() => InitTowers();
+    protected override void OnInitialized()
+    {
+        InitTowers();
+    }
+
+    public void Dispose() => _cts?.Cancel();
+
+    private void OnDiskCountChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var d)) return;
+        if (d == DiskCount) return;
+
+        DiskCount = Math.Clamp(d, 3, 8);
+        InitTowers();
+        StateHasChanged();
+    }
+
+    private void OnSpeedChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var s))
+            Speed = Math.Clamp(s, 1, 10);
+    }
 
     private void InitTowers()
     {
+        _cts?.Cancel();
+        IsPlaying = false;
+        IsMovingDisk = false;
+        CurrentStep = 0;
+
         Towers = new List<List<int>> { new(), new(), new() };
         for (int size = DiskCount; size >= 1; size--) Towers[0].Add(size);
-        Moves = new List<Move>();
-        CurrentStep = 0;
-    }
 
-    private void Solve()
-    {
         Moves = new List<Move>();
         GenerateMoves(DiskCount, 0, 2, 1, Moves);
-        CurrentStep = 0;
     }
 
-    private void StepOnce()
+    private async Task StartPlay()
     {
-        if (CurrentStep >= Moves.Count) return;
-        ApplyMove(Moves[CurrentStep]);
-        CurrentStep++;
-    }
-
-    private async Task AutoPlay()
-    {
-        IsAutoPlaying = true;
-        while (CurrentStep < Moves.Count)
+        if (CurrentStep >= Moves.Count)
         {
-            ApplyMove(Moves[CurrentStep]);
-            CurrentStep++;
-            StateHasChanged();
-            await Task.Delay(450);
+            CurrentStep = 0;
+            Towers = new List<List<int>> { new(), new(), new() };
+            for (int size = DiskCount; size >= 1; size--) Towers[0].Add(size);
         }
-        IsAutoPlaying = false;
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        IsPlaying = true;
+
+        try
+        {
+            while (CurrentStep < Moves.Count)
+            {
+                await AnimateMoveAsync(Moves[CurrentStep], _cts.Token);
+                CurrentStep++;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            IsPlaying = false;
+            IsMovingDisk = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void PausePlay()
+    {
+        _cts?.Cancel();
+        IsPlaying = false;
+    }
+
+    private void GoToStep(int step)
+    {
+        _cts?.Cancel();
+        IsPlaying = false;
+        IsMovingDisk = false;
+
+        Towers = new List<List<int>> { new(), new(), new() };
+        for (int size = DiskCount; size >= 1; size--) Towers[0].Add(size);
+
+        for (int i = 0; i < step; i++)
+        {
+            ApplyMove(Moves[i]);
+        }
+
+        CurrentStep = step;
+        StateHasChanged();
+    }
+
+    private async Task AnimateMoveAsync(Move m, CancellationToken token)
+    {
+        var fromTower = Towers[m.From];
+        int size = fromTower[^1];
+
+        double startX = TowerX(m.From);
+        double endX = TowerX(m.To);
+        double startY = DiskY(fromTower.Count - 1);
+        double endY = DiskY(Towers[m.To].Count);
+
+        IsMovingDisk = true;
+        MovingDiskSize = size;
+
+        // Устанавливаем начальную позицию перед стартом анимации
+        AnimX = startX;
+        AnimY = startY;
+        await InvokeAsync(StateHasChanged);
+
+        // Количество кадров зависит от скорости (от 120 до 30)
+        int totalFrames = 120 - (Speed - 1) * 10;
+        int delayMs = 10;
+
+        for (int f = 1; f <= totalFrames; f++)
+        {
+            token.ThrowIfCancellationRequested();
+            double t = f / (double)totalFrames;
+
+            // Траектория: 0-40% вверх, 40-60% вбок, 60-100% вниз
+            if (t <= 0.4)
+            {
+                AnimX = startX;
+                AnimY = Lerp(startY, TopY, t / 0.4);
+            }
+            else if (t <= 0.6)
+            {
+                AnimX = Lerp(startX, endX, (t - 0.4) / 0.2);
+                AnimY = TopY;
+            }
+            else
+            {
+                AnimX = endX;
+                AnimY = Lerp(TopY, endY, (t - 0.6) / 0.4);
+            }
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(delayMs, token);
+        }
+
+        // Анимация завершена. Обновляем состояние башни.
+        fromTower.RemoveAt(fromTower.Count - 1);
+        Towers[m.To].Add(size);
+
+        IsMovingDisk = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ApplyMove(Move m)
@@ -114,31 +282,41 @@
         Towers[m.To].Add(disk);
     }
 
-    private int TowerX(int towerIndex) => 150 + towerIndex * PegSpacing;
-    private int DiskY(int stackIndex) => BaseY - (stackIndex + 1) * DiskHeight;
-    private int DiskWidthFor(int size) => MinDiskWidth + (MaxDiskWidth - MinDiskWidth) * size / Math.Max(DiskCount, 1);
+    // --- Математика и отрисовка ---
 
-    private IEnumerable<DiskView> GetDiskViews()
+    private static double Lerp(double a, double b, double t) => a + (b - a) * t;
+
+    // Форматирование с точкой (InvariantCulture), чтобы не ломался SVG в русской локали
+    private static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private double TowerX(int towerIndex) => 100 + towerIndex * PegSpacing;
+    private double DiskY(int stackIndex) => BaseY - (stackIndex + 1) * DiskHeight;
+
+    // Размер зависит от максимально возможного (8), чтобы диски не меняли ширину при сдвиге бегунка
+    private double DiskWidthFor(int size) => MinDiskWidth + (MaxDiskWidth - MinDiskWidth) * (size - 1) / 7.0;
+
+    private List<DiskView> GetDiskViews()
     {
+        var list = new List<DiskView>();
         for (int t = 0; t < Towers.Count; t++)
         {
             var tower = Towers[t];
             for (int i = 0; i < tower.Count; i++)
             {
                 int size = tower[i];
-                int width = DiskWidthFor(size);
-                yield return new DiskView(size, TowerX(t) - width / 2, DiskY(i), width, Colors[(size - 1) % Colors.Length]);
+                if (IsMovingDisk && size == MovingDiskSize) continue;
+
+                double width = DiskWidthFor(size);
+                list.Add(new DiskView(size, TowerX(t), DiskY(i), width, Colors[(size - 1) % Colors.Length]));
             }
         }
+        return list;
     }
 
-    private readonly record struct DiskView(int Size, int X, int Y, int Width, string Color);
+    // X теперь хранит центр диска, а не левый край
+    private readonly record struct DiskView(int Size, double X, double Y, double Width, string Color);
     private readonly record struct Move(int Disk, int From, int To);
 
-    // Рекурсивная триада:
-    // база — n == 0, ходов не требуется;
-    // декомпозиция — переносим n-1 колец с помощью вспомогательного стержня,
-    // переносим большое кольцо напрямую, переносим n-1 колец на место.
     private static void GenerateMoves(int n, int from, int to, int via, List<Move> moves)
     {
         if (n <= 0) return;
