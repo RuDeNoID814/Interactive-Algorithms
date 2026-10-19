@@ -47,6 +47,14 @@ html, body {
     border-radius: 14px;
     padding: 1rem 1.1rem;
     background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, transform 0.15s;
+}
+a.semester-lab:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    color: inherit;
 }
 .semester-lab-active {
     border-color: var(--accent);
@@ -284,6 +292,56 @@ html, body {
     padding: 2rem;
     border: 1px dashed var(--border);
     border-radius: 14px;
+}
+
+.dragon-canvas-wrap {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1rem;
+}
+.dragon-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.hanoi-canvas-wrap {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1rem;
+}
+.hanoi-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.hanoi-peg {
+    fill: #94a3b8;
+}
+.hanoi-base {
+    fill: #475569;
+    rx: 3px;
+}
+.hanoi-peg-label {
+    font-size: 13px;
+    font-weight: 700;
+    fill: var(--ink-soft);
+    text-anchor: middle;
+}
+.hanoi-disk {
+    stroke: rgba(0,0,0,0.15);
+    stroke-width: 1;
+    transition: x 0.35s ease, y 0.35s ease;
+}
+.hanoi-disk-label {
+    font-size: 11px;
+    font-weight: 700;
+    fill: #fff;
+    text-anchor: middle;
+    pointer-events: none;
+    transition: x 0.35s ease, y 0.35s ease;
 }
 
 /* ── Algorithm detail page ── */

@@ -1,0 +1,118 @@
+@using AlgoLab.Models
+@using System.Globalization
+
+<h3>Кривая дракона</h3>
+
+<p>
+    Фрактал строится рекурсивно: отрезок заменяется двумя отрезками половинной длины,
+    повёрнутыми на 90°, затем то же самое применяется к каждому из них — и так до нужной глубины.
+</p>
+
+<div class="alert alert-info">
+    <strong>Сложность:</strong> O(2ⁿ) — на глубине n получается 2ⁿ отрезков (рекурсивная триада: база — глубина 0, рисуем отрезок как есть; декомпозиция — отрезок делится на два с поворотом)<br />
+    <strong>Глубина рекурсии:</strong> O(n)
+</div>
+
+<hr />
+
+<div class="row align-items-end">
+    <div class="col-md-6 mb-3">
+        <label>Глубина: @Depth (@Math.Pow(2, Depth).ToString("N0") отрезков)</label>
+        <input type="range" min="1" max="15" class="form-range"
+               @bind="Depth" @bind:event="oninput" disabled="@IsAnimating" />
+    </div>
+    <div class="col-md-6 mb-3">
+        <button class="btn btn-primary me-2" @onclick="BuildAnimated" disabled="@IsAnimating">
+            @(IsAnimating ? "Строится..." : "Построить")
+        </button>
+        <button class="btn btn-outline-secondary" @onclick="ShowInstant" disabled="@IsAnimating">
+            Сразу готово
+        </button>
+    </div>
+</div>
+
+<div class="dragon-canvas-wrap">
+    <svg viewBox="0 0 600 400" class="dragon-canvas">
+        <polyline points="@PointsAttribute" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-linejoin="round" />
+    </svg>
+</div>
+
+<p class="text-muted small">
+    Показано точек: @VisibleCount из @AllPoints.Count
+</p>
+
+@code {
+    private int Depth { get; set; } = 10;
+    private bool IsAnimating { get; set; }
+    private int VisibleCount { get; set; }
+    private List<Pt> AllPoints { get; set; } = new();
+
+    private const int AnimationFrames = 90;
+    private const int FrameDelayMs = 20;
+
+    private string PointsAttribute =>
+        string.Join(" ", AllPoints.Take(VisibleCount).Select(p =>
+            string.Create(CultureInfo.InvariantCulture, $"{p.X * 600:F1},{p.Y * 400:F1}")));
+
+    protected override void OnInitialized()
+    {
+        ShowInstant();
+    }
+
+    private void ShowInstant()
+    {
+        AllPoints = GeneratePoints(Depth);
+        VisibleCount = AllPoints.Count;
+    }
+
+    private async Task BuildAnimated()
+    {
+        AllPoints = GeneratePoints(Depth);
+        VisibleCount = 0;
+        IsAnimating = true;
+
+        int total = AllPoints.Count;
+        int batch = Math.Max(1, total / AnimationFrames);
+
+        while (VisibleCount < total)
+        {
+            VisibleCount = Math.Min(total, VisibleCount + batch);
+            StateHasChanged();
+            await Task.Delay(FrameDelayMs);
+        }
+
+        IsAnimating = false;
+    }
+
+    private readonly record struct Pt(double X, double Y);
+
+    private static List<Pt> GeneratePoints(int depth)
+    {
+        var points = new List<Pt>();
+        var start = new Pt(0.2, 0.5);
+        var end = new Pt(0.8, 0.5);
+
+        points.Add(start);
+        Recurse(start, end, depth, 1, points);
+        points.Add(end);
+
+        return points;
+    }
+
+    // Рекурсивная триада:
+    // база — depth == 0, дальше не делим;
+    // декомпозиция — находим точку излома и рекурсивно строим обе половины.
+    private static void Recurse(Pt p1, Pt p2, int depth, int direction, List<Pt> points)
+    {
+        if (depth <= 0) return;
+
+        var mid = new Pt(
+            (p1.X + p2.X) / 2 + direction * (p2.Y - p1.Y) / 2,
+            (p1.Y + p2.Y) / 2 - direction * (p2.X - p1.X) / 2
+        );
+
+        Recurse(p1, mid, depth - 1, 1, points);
+        points.Add(mid);
+        Recurse(mid, p2, depth - 1, -1, points);
+    }
+}

@@ -1,0 +1,149 @@
+@using AlgoLab.Models
+
+<h3>Ханойская башня</h3>
+
+<p>
+    Три стержня, N колец на первом. Нужно перенести все кольца на третий стержень, не кладя большее кольцо на меньшее.
+    Решение рекурсивное: чтобы перенести n колец с A на C, сначала переносим n−1 колец с A на B,
+    затем большое кольцо с A на C напрямую, затем n−1 колец с B на C.
+</p>
+
+<div class="alert alert-info">
+    <strong>Сложность:</strong> O(2ⁿ) — число ходов ровно 2ⁿ−1 (для 8 колец это 255 ходов)<br />
+    <strong>Глубина рекурсии:</strong> O(n)
+</div>
+
+<hr />
+
+<div class="row align-items-end mb-3">
+    <div class="col-md-3 mb-2">
+        <label>Число дисков: @DiskCount</label>
+        <input type="range" min="1" max="8" class="form-range"
+               @bind="DiskCount" @bind:event="oninput" disabled="@IsAutoPlaying" />
+    </div>
+    <div class="col-md-9 mb-2">
+        <button class="btn btn-primary me-2" @onclick="InitTowers" disabled="@IsAutoPlaying">Создать башню</button>
+        <button class="btn btn-outline-primary me-2" @onclick="Solve" disabled="@(IsAutoPlaying || Moves.Count > 0)">Найти решение</button>
+        <button class="btn btn-outline-secondary me-2" @onclick="StepOnce" disabled="@(!CanStep)">Следующий ход</button>
+        <button class="btn btn-outline-secondary" @onclick="AutoPlay" disabled="@(!CanStep)">Автопрохождение</button>
+    </div>
+</div>
+
+<div class="hanoi-canvas-wrap">
+    <svg viewBox="0 0 600 300" class="hanoi-canvas">
+        @for (int t = 0; t < 3; t++)
+        {
+            var x = TowerX(t);
+            <rect class="hanoi-peg" x="@(x - 3)" y="60" width="6" height="200" />
+            <rect class="hanoi-base" x="@(x - 70)" y="258" width="140" height="8" />
+            <text><tspan class="hanoi-peg-label" x="@x" y="285">@(((char)('A' + t)))</tspan></text>
+        }
+
+        @foreach (var disk in GetDiskViews())
+        {
+            <rect @key="disk.Size" class="hanoi-disk" x="@disk.X" y="@disk.Y" width="@disk.Width" height="20" rx="4" fill="@disk.Color" />
+            <text><tspan @key="@($"label{disk.Size}")" class="hanoi-disk-label" x="@(disk.X + disk.Width / 2)" y="@(disk.Y + 14)">@disk.Size</tspan></text>
+        }
+    </svg>
+</div>
+
+<p class="text-muted small mt-2">
+    Ходов: @CurrentStep из @Moves.Count @(Moves.Count > 0 ? $"(2^{DiskCount}-1 = {(1 << DiskCount) - 1})" : "")
+</p>
+
+@code {
+    private int DiskCount { get; set; } = 4;
+    private List<List<int>> Towers { get; set; } = new();
+    private List<Move> Moves { get; set; } = new();
+    private int CurrentStep { get; set; }
+    private bool IsAutoPlaying { get; set; }
+
+    private bool CanStep => Moves.Count > 0 && CurrentStep < Moves.Count && !IsAutoPlaying;
+
+    private const int DiskHeight = 20;
+    private const int PegSpacing = 150;
+    private const int BaseY = 258;
+    private const int MinDiskWidth = 30;
+    private const int MaxDiskWidth = 140;
+
+    private static readonly string[] Colors =
+        { "#ef4444", "#f97316", "#eab308", "#22c55e", "#2563eb", "#6366f1", "#a855f7", "#ec4899" };
+
+    protected override void OnInitialized() => InitTowers();
+
+    private void InitTowers()
+    {
+        Towers = new List<List<int>> { new(), new(), new() };
+        for (int size = DiskCount; size >= 1; size--) Towers[0].Add(size);
+        Moves = new List<Move>();
+        CurrentStep = 0;
+    }
+
+    private void Solve()
+    {
+        Moves = new List<Move>();
+        GenerateMoves(DiskCount, 0, 2, 1, Moves);
+        CurrentStep = 0;
+    }
+
+    private void StepOnce()
+    {
+        if (CurrentStep >= Moves.Count) return;
+        ApplyMove(Moves[CurrentStep]);
+        CurrentStep++;
+    }
+
+    private async Task AutoPlay()
+    {
+        IsAutoPlaying = true;
+        while (CurrentStep < Moves.Count)
+        {
+            ApplyMove(Moves[CurrentStep]);
+            CurrentStep++;
+            StateHasChanged();
+            await Task.Delay(450);
+        }
+        IsAutoPlaying = false;
+    }
+
+    private void ApplyMove(Move m)
+    {
+        var from = Towers[m.From];
+        int disk = from[^1];
+        from.RemoveAt(from.Count - 1);
+        Towers[m.To].Add(disk);
+    }
+
+    private int TowerX(int towerIndex) => 150 + towerIndex * PegSpacing;
+    private int DiskY(int stackIndex) => BaseY - (stackIndex + 1) * DiskHeight;
+    private int DiskWidthFor(int size) => MinDiskWidth + (MaxDiskWidth - MinDiskWidth) * size / Math.Max(DiskCount, 1);
+
+    private IEnumerable<DiskView> GetDiskViews()
+    {
+        for (int t = 0; t < Towers.Count; t++)
+        {
+            var tower = Towers[t];
+            for (int i = 0; i < tower.Count; i++)
+            {
+                int size = tower[i];
+                int width = DiskWidthFor(size);
+                yield return new DiskView(size, TowerX(t) - width / 2, DiskY(i), width, Colors[(size - 1) % Colors.Length]);
+            }
+        }
+    }
+
+    private readonly record struct DiskView(int Size, int X, int Y, int Width, string Color);
+    private readonly record struct Move(int Disk, int From, int To);
+
+    // Рекурсивная триада:
+    // база — n == 0, ходов не требуется;
+    // декомпозиция — переносим n-1 колец с помощью вспомогательного стержня,
+    // переносим большое кольцо напрямую, переносим n-1 колец на место.
+    private static void GenerateMoves(int n, int from, int to, int via, List<Move> moves)
+    {
+        if (n <= 0) return;
+        GenerateMoves(n - 1, from, via, to, moves);
+        moves.Add(new Move(n, from, to));
+        GenerateMoves(n - 1, via, to, from, moves);
+    }
+}

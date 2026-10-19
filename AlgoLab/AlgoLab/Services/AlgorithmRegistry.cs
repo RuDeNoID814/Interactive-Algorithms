@@ -175,6 +175,32 @@ public static class AlgorithmRegistry
             Slug = "huffman",
             Category = "Жадные алгоритмы",
             Formula = "min-heap merge"
+        },
+
+        new()
+        {
+            Name = "Кривая дракона",
+            Description = "Рекурсивное построение фрактала делением отрезка",
+            Complexity = "O(2ⁿ)",
+            ComplexityType = ComplexityType.Exponential,
+            Slug = "dragon-curve",
+            Category = "Фракталы",
+            Formula = "mid(p₁,p₂) ± ⊥",
+            Laboratory = 2,
+            CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Ханойская башня",
+            Description = "Перенос N колец между стержнями по правилам головоломки",
+            Complexity = "O(2ⁿ)",
+            ComplexityType = ComplexityType.Exponential,
+            Slug = "hanoi",
+            Category = "Головоломки",
+            Formula = "2ⁿ−1 ходов",
+            Laboratory = 2,
+            CanCompare = false
         }
     ];
 

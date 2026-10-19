@@ -71,14 +71,24 @@
     opacity: 0.8;
 }
 
-.lab-entry {
+::deep .lab-entry {
     display: flex;
     align-items: center;
     gap: 0.7rem;
     padding: 0.5rem 0.75rem;
+    border-radius: 8px;
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--ink);
+    text-decoration: none;
+}
+
+::deep .lab-entry:hover {
+    background: var(--surface-hover);
+}
+
+::deep .lab-entry.active .lab-marker {
+    background: var(--accent);
 }
 
 .lab-marker {

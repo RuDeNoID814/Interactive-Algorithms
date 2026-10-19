@@ -1,0 +1,49 @@
+@page "/lab2"
+@using AlgoLab.Models
+
+<div class="catalog">
+
+    <div class="catalog-header">
+        <div class="catalog-topic">
+            <div class="catalog-title-row">
+                <h2>Лабораторная работа №2</h2>
+                <span class="catalog-count-badge">@Algorithms.Count() алгоритмов</span>
+            </div>
+            <p class="catalog-subtitle">Рекурсивные алгоритмы</p>
+        </div>
+    </div>
+
+    @if (!Algorithms.Any())
+    {
+        <div class="algo-empty">Пока ничего не добавлено.</div>
+    }
+    else
+    {
+        <div class="algo-grid">
+            @foreach (var algo in Algorithms)
+            {
+                <a href="@($"/algorithm/{algo.Slug}")" class="algo-card">
+
+                    <div class="algo-card-top">
+                        <span class="algo-card-complexity">@algo.Complexity</span>
+                    </div>
+
+                    <h5>@algo.Name</h5>
+                    <p>@algo.Description</p>
+
+                    <div class="algo-card-foot">
+                        <span class="algo-card-formula">@algo.Formula</span>
+                        <span class="algo-card-arrow">&#8599;</span>
+                    </div>
+
+                </a>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    private IEnumerable<AlgorithmInfo> Algorithms =>
+        AlgorithmRegistry.All.Where(a => a.Laboratory == 2);
+}
