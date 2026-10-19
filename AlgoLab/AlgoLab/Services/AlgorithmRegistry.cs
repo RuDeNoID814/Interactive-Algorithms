@@ -13,7 +13,8 @@ public static class AlgorithmRegistry
             Complexity = "O(1)",
             ComplexityType = ComplexityType.Constant,
             Slug = "const",
-            Category = "Векторы"
+            Category = "Векторы",
+            Formula = "f(n) = 1"
         },
 
         new()
@@ -23,7 +24,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n)",
             ComplexityType = ComplexityType.Linear,
             Slug = "sum",
-            Category = "Векторы"
+            Category = "Векторы",
+            Formula = "Σ aᵢ"
         },
 
         new()
@@ -33,7 +35,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n)",
             ComplexityType = ComplexityType.Linear,
             Slug = "product",
-            Category = "Векторы"
+            Category = "Векторы",
+            Formula = "Π aᵢ"
         },
 
         new()
@@ -43,7 +46,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n²)",
             ComplexityType = ComplexityType.Quadratic,
             Slug = "poly-naive",
-            Category = "Полиномы"
+            Category = "Полиномы",
+            Formula = "Σ aᵢxⁱ"
         },
 
         new()
@@ -53,7 +57,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n)",
             ComplexityType = ComplexityType.Linear,
             Slug = "horner",
-            Category = "Полиномы"
+            Category = "Полиномы",
+            Formula = "(…(aₙx+aₙ₋₁)x+…)"
         },
 
         new()
@@ -63,7 +68,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n²)",
             ComplexityType = ComplexityType.Quadratic,
             Slug = "bubble",
-            Category = "Сортировки"
+            Category = "Сортировки",
+            Formula = "aᵢ ↔ aᵢ₊₁"
         },
 
         new()
@@ -73,7 +79,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n log n)",
             ComplexityType = ComplexityType.Linearithmic,
             Slug = "quick",
-            Category = "Сортировки"
+            Category = "Сортировки",
+            Formula = "divide & conquer"
         },
 
         new()
@@ -83,7 +90,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n log n)",
             ComplexityType = ComplexityType.Linearithmic,
             Slug = "timsort",
-            Category = "Сортировки"
+            Category = "Сортировки",
+            Formula = "run + merge"
         },
 
         new()
@@ -93,7 +101,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n)",
             ComplexityType = ComplexityType.Linear,
             Slug = "pow-simple",
-            Category = "Степень"
+            Category = "Степень",
+            Formula = "x·x·…·x"
         },
 
         new()
@@ -103,7 +112,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n)",
             ComplexityType = ComplexityType.Linear,
             Slug = "pow-recursive",
-            Category = "Степень"
+            Category = "Степень",
+            Formula = "x·xⁿ⁻¹"
         },
 
         new()
@@ -113,7 +123,8 @@ public static class AlgorithmRegistry
             Complexity = "O(log n)",
             ComplexityType = ComplexityType.Logarithmic,
             Slug = "pow-fast",
-            Category = "Степень"
+            Category = "Степень",
+            Formula = "(x^(n/2))²"
         },
 
         new()
@@ -123,7 +134,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n³)",
             ComplexityType = ComplexityType.Cubic,
             Slug = "matrix",
-            Category = "Матрицы"
+            Category = "Матрицы",
+            Formula = "Σ Aᵢₖ·Bₖⱼ"
         },
         new()
         {
@@ -139,7 +151,9 @@ public static class AlgorithmRegistry
             Slug = "tsp",
 
             Category =
-                "Труднорешаемые задачи"
+                "Труднорешаемые задачи",
+
+            Formula = "min Σ d(i,j)"
         },
         new()
         {
@@ -148,7 +162,8 @@ public static class AlgorithmRegistry
             Complexity = "O(V+E)",
             ComplexityType = ComplexityType.Linear,
             Slug = "bfs",
-            Category = "Графы"
+            Category = "Графы",
+            Formula = "queue + visited"
         },
 
         new()
@@ -158,7 +173,8 @@ public static class AlgorithmRegistry
             Complexity = "O(n log n)",
             ComplexityType = ComplexityType.Linearithmic,
             Slug = "huffman",
-            Category = "Жадные алгоритмы"
+            Category = "Жадные алгоритмы",
+            Formula = "min-heap merge"
         }
     ];
 

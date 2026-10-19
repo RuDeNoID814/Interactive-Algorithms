@@ -14,6 +14,8 @@ public sealed class AlgorithmInfo
 
     public string Category { get; init; } = "";
 
+    public string Formula { get; init; } = "";
+
     public int Laboratory { get; init; } = 1;
 
     public bool CanCompare { get; init; } = true;

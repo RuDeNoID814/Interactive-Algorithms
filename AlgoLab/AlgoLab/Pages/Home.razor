@@ -1,50 +1,140 @@
 @page "/"
+@using AlgoLab.Models
 
-<div class="home-header">
+<div class="semester-overview">
+    <div class="semester-intro">
+        <div class="eyebrow">Алгоритмы / Практикум</div>
+        <h1>Лабораторные работы</h1>
+    </div>
 
-    <h1>Interactive Algorithms</h1>
+    <div class="semester-labs">
+        <div class="semester-lab semester-lab-active">
+            <div class="semester-lab-num">01</div>
+            <div class="semester-lab-info">
+                <div class="semester-lab-name">Лабораторная №1</div>
+                <div class="semester-lab-topic">Анализ сложности · @AlgorithmRegistry.All.Count(a => a.Laboratory == 1) алгоритмов</div>
+            </div>
+        </div>
+        <div class="semester-lab semester-lab-soon">
+            <div class="semester-lab-num">02</div>
+            <div class="semester-lab-info">
+                <div class="semester-lab-name">Лабораторная №2</div>
+                <div class="semester-lab-topic">Материалы будут добавлены</div>
+            </div>
+        </div>
+        <div class="semester-lab semester-lab-soon">
+            <div class="semester-lab-num">03</div>
+            <div class="semester-lab-info">
+                <div class="semester-lab-name">Лабораторная №3</div>
+                <div class="semester-lab-topic">Материалы будут добавлены</div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <p>
-        Лабораторная работа №1 — эмпирический анализ
-        временной сложности алгоритмов
-    </p>
+<div class="catalog">
+
+    <div class="catalog-header">
+        <div class="catalog-topic">
+            <div class="catalog-title-row">
+                <h2>Лабораторная работа №1</h2>
+                <span class="catalog-count-badge">@AlgorithmRegistry.All.Count(a => a.Laboratory == 1) алгоритмов</span>
+            </div>
+            <p class="catalog-subtitle">Эмпирический анализ временной сложности алгоритмов</p>
+        </div>
+        <a href="/comparison" class="compare-button">
+            <span class="compare-icon">&#8644;</span>
+            Сравнить алгоритмы
+        </a>
+    </div>
+
+    <div class="catalog-tabs">
+        <NavLink class="catalog-tab" href="" Match="NavLinkMatch.All">Алгоритмы</NavLink>
+        <NavLink class="catalog-tab" href="comparison">Сравнение</NavLink>
+        <NavLink class="catalog-tab" href="history">История</NavLink>
+    </div>
+
+    <div class="catalog-filters">
+        <div class="search-box">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" placeholder="Найти алгоритм..." @bind="SearchTerm" @bind:event="oninput" />
+        </div>
+
+        <select class="complexity-filter" @bind="SelectedComplexity">
+            <option value="">Любая сложность</option>
+            @foreach (var type in Enum.GetValues<ComplexityType>())
+            {
+                <option value="@type">@type</option>
+            }
+        </select>
+
+        <div class="results-count">Показано @FilteredAlgorithms.Count() из @AlgorithmRegistry.All.Count(a => a.Laboratory == 1)</div>
+    </div>
+
+    @foreach (var category in FilteredAlgorithms.GroupBy(a => a.Category))
+    {
+        <div class="algo-category">
+            <div class="algo-category-header">
+                <h4>@category.Key</h4>
+                <span class="algo-category-count">@category.Count() алгоритма</span>
+            </div>
+
+            <div class="algo-grid">
+                @foreach (var algo in category)
+                {
+                    <a href="@($"/algorithm/{algo.Slug}")" class="algo-card">
+
+                        <div class="algo-card-top">
+                            <span class="algo-card-complexity">@algo.Complexity</span>
+                            <svg class="algo-sparkline" viewBox="0 0 70 28" width="70" height="28">
+                                <path d="@GetSparkline(algo.ComplexityType)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            </svg>
+                        </div>
+
+                        <h5>@algo.Name</h5>
+                        <p>@algo.Description</p>
+
+                        <div class="algo-card-foot">
+                            <span class="algo-card-formula">@algo.Formula</span>
+                            <span class="algo-card-arrow">&#8599;</span>
+                        </div>
+
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!FilteredAlgorithms.Any())
+    {
+        <div class="algo-empty">Ничего не найдено — попробуй другой запрос или сбрось фильтр.</div>
+    }
 
 </div>
 
+@code {
+    private string SearchTerm { get; set; } = "";
+    private string SelectedComplexity { get; set; } = "";
 
-@foreach (var category in
-    AlgorithmRegistry.All
-        .GroupBy(a => a.Category))
-{
-    <div class="mt-4">
+    private IEnumerable<AlgorithmInfo> FilteredAlgorithms =>
+        AlgorithmRegistry.All
+            .Where(a => a.Laboratory == 1)
+            .Where(a => string.IsNullOrWhiteSpace(SearchTerm)
+                || a.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)
+                || a.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+            .Where(a => string.IsNullOrEmpty(SelectedComplexity)
+                || a.ComplexityType.ToString() == SelectedComplexity);
 
-        <h4 class="mb-3">
-            @category.Key
-        </h4>
-
-        <div class="algo-grid">
-
-            @foreach (var algo in category)
-            {
-                <a href="@($"/algorithm/{algo.Slug}")"
-                   class="algo-card">
-
-                    <div class="algo-card-complexity">
-                        @algo.Complexity
-                    </div>
-
-                    <h5>
-                        @algo.Name
-                    </h5>
-
-                    <p>
-                        @algo.Description
-                    </p>
-
-                </a>
-            }
-
-        </div>
-
-    </div>
+    private static string GetSparkline(ComplexityType type) => type switch
+    {
+        ComplexityType.Constant => "M2,20 L68,20",
+        ComplexityType.Logarithmic => "M2,24 C16,6 34,2 68,2",
+        ComplexityType.Linear => "M2,25 L68,3",
+        ComplexityType.Linearithmic => "M2,25 C30,22 48,12 68,2",
+        ComplexityType.Quadratic => "M2,25 C48,25 58,12 68,2",
+        ComplexityType.Cubic => "M2,26 C58,26 64,8 68,1",
+        ComplexityType.Exponential => "M2,26 L50,25 C62,25 66,10 68,1",
+        ComplexityType.Factorial => "M2,26 L58,26 C66,26 67,6 68,1",
+        _ => "M2,20 L68,20"
+    };
 }

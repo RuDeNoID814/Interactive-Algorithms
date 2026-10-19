@@ -1,172 +1,47 @@
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="brand">
+    <div class="brand-mark">a_</div>
+    <span class="brand-name">AlgoLab</span>
+</div>
 
-    <div class="container-fluid">
+<nav class="side-nav">
 
-        <a class="navbar-brand"
-           href="">
-            AlgoLab
+    <div class="nav-section">
+        <NavLink class="side-link" href="" Match="NavLinkMatch.All">
+            <span class="side-icon">&#9634;</span>
+            Главная
+        </NavLink>
+        <a class="side-link" href="https://learn.microsoft.com/aspnet/core/" target="_blank">
+            <span class="side-icon">&#9432;</span>
+            О проекте
         </a>
-
-
-        <button title="Navigation menu"
-                class="navbar-toggler"
-                @onclick="ToggleNavMenu">
-
-            <span class="navbar-toggler-icon">
-            </span>
-
-        </button>
-
     </div>
 
+    <div class="nav-section">
+        <div class="nav-section-title">Семестр</div>
+
+        <div class="lab-entry lab-entry-active">
+            <span class="lab-marker"></span>
+            <span>Лабораторная №1</span>
+        </div>
+        <div class="lab-subsections">
+            <NavLink class="lab-sub-link" href="" Match="NavLinkMatch.All">Алгоритмы</NavLink>
+            <NavLink class="lab-sub-link" href="comparison">Сравнение</NavLink>
+            <NavLink class="lab-sub-link" href="history">История</NavLink>
+        </div>
+
+        <div class="lab-entry lab-entry-soon">
+            <span class="lab-marker"></span>
+            <span>Лабораторная №2</span>
+        </div>
+        <div class="lab-entry lab-entry-soon">
+            <span class="lab-marker"></span>
+            <span>Лабораторная №3</span>
+        </div>
+    </div>
+
+</nav>
+
+<div class="side-note">
+    <div class="side-note-course">Курс «Алгоритмы и анализ сложности»</div>
+    <div class="side-note-purpose">Учебная среда для лабораторных работ</div>
 </div>
-
-
-<div class="@NavMenuCssClass nav-scrollable"
-     @onclick="ToggleNavMenu">
-
-    <nav class="flex-column">
-
-
-        <!-- ГЛАВНАЯ -->
-
-        <div class="nav-item px-3">
-
-            <NavLink class="nav-link"
-                     href=""
-                     Match="NavLinkMatch.All">
-
-                <span class="bi bi-house-door-fill-nav-menu"
-                      aria-hidden="true">
-                </span>
-
-                Главная
-
-            </NavLink>
-
-        </div>
-
-
-        <!-- ЛАБОРАТОРНАЯ №1 -->
-
-        <div class="px-3 mt-3 mb-1">
-
-            <small style="
-                color:#9ca3af;
-                text-transform:uppercase;
-                font-weight:600;">
-
-                Лабораторная №1
-
-            </small>
-
-        </div>
-
-
-        <div class="nav-item px-3">
-
-            <NavLink class="nav-link"
-                     href="">
-
-                Алгоритмы
-
-            </NavLink>
-
-        </div>
-
-
-        <div class="nav-item px-3">
-
-            <NavLink class="nav-link"
-                     href="comparison">
-
-                Сравнение
-
-            </NavLink>
-
-        </div>
-
-
-        <!-- ИСТОРИЯ -->
-        <!-- Страницу добавим следующим этапом. -->
-
-        <div class="nav-item px-3">
-
-            <NavLink class="nav-link"
-                     href="history">
-
-                История
-
-            </NavLink>
-
-        </div>
-
-
-        <!-- БУДУЩИЕ ЛАБОРАТОРНЫЕ -->
-
-        <div class="px-3 mt-4 mb-1">
-
-            <small style="
-                color:#9ca3af;
-                text-transform:uppercase;
-                font-weight:600;">
-
-                Другие лабораторные
-
-            </small>
-
-        </div>
-
-
-        <div class="nav-item px-3">
-
-            <span class="nav-link"
-                  style="
-                opacity:.5;
-                cursor:default;">
-
-                Лабораторная №2
-                — скоро
-
-            </span>
-
-        </div>
-
-
-        <div class="nav-item px-3">
-
-            <span class="nav-link"
-                  style="
-                opacity:.5;
-                cursor:default;">
-
-                Лабораторная №3
-                — скоро
-
-            </span>
-
-        </div>
-
-    </nav>
-
-</div>
-
-
-@code {
-
-    private bool collapseNavMenu =
-        true;
-
-
-    private string? NavMenuCssClass =>
-        collapseNavMenu
-            ? "collapse"
-            : null;
-
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu =
-            !collapseNavMenu;
-    }
-}
