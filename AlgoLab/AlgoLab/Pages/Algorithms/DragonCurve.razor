@@ -1,118 +1,289 @@
 @using AlgoLab.Models
 @using System.Globalization
 
+@implements IDisposable
+
 <h3>Кривая дракона</h3>
 
 <p>
-    Фрактал строится рекурсивно: отрезок заменяется двумя отрезками половинной длины,
-    повёрнутыми на 90°, затем то же самое применяется к каждому из них — и так до нужной глубины.
+    Фрактал строится итеративно: на каждом шаге текущий силуэт копируется,
+    поворачивается на 90° вокруг крайней точки и пристраивается к ней.
+    После n шагов получается 2ⁿ отрезков.
 </p>
 
 <div class="alert alert-info">
-    <strong>Сложность:</strong> O(2ⁿ) — на глубине n получается 2ⁿ отрезков (рекурсивная триада: база — глубина 0, рисуем отрезок как есть; декомпозиция — отрезок делится на два с поворотом)<br />
-    <strong>Глубина рекурсии:</strong> O(n)
+    <strong>Сложность:</strong> O(2ⁿ) — на глубине n получается 2ⁿ отрезков<br />
+    <strong>Память:</strong> O(2ⁿ)
 </div>
 
 <hr />
 
 <div class="row align-items-end">
     <div class="col-md-6 mb-3">
-        <label>Глубина: @Depth (@Math.Pow(2, Depth).ToString("N0") отрезков)</label>
-        <input type="range" min="1" max="15" class="form-range"
-               @bind="Depth" @bind:event="oninput" disabled="@IsAnimating" />
+        <label for="dragon-depth">
+            Глубина: @Depth (@Math.Pow(2, Depth).ToString("N0") отрезков)
+        </label>
+        <input id="dragon-depth" type="range" min="1" max="15" class="form-range"
+               value="@Depth" @oninput="OnDepthInput" />
     </div>
     <div class="col-md-6 mb-3">
-        <button class="btn btn-primary me-2" @onclick="BuildAnimated" disabled="@IsAnimating">
-            @(IsAnimating ? "Строится..." : "Построить")
-        </button>
-        <button class="btn btn-outline-secondary" @onclick="ShowInstant" disabled="@IsAnimating">
-            Сразу готово
-        </button>
+        <label for="dragon-speed">
+            Скорость: @Speed× · @FrameDelayMs мс/кадр
+        </label>
+        <input id="dragon-speed" type="range" min="1" max="10" class="form-range"
+               value="@Speed" @oninput="OnSpeedInput" />
     </div>
 </div>
 
-<div class="dragon-canvas-wrap">
-    <svg viewBox="0 0 600 400" class="dragon-canvas">
-        <polyline points="@PointsAttribute" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-linejoin="round" />
+<div class="dragon-canvas-wrap" style="max-width: 620px; margin: 0 auto;">
+    <svg viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet"
+         style="width: 100%; height: auto; aspect-ratio: 1 / 1; display: block;">
+
+        <!-- Уже «зафиксированные» половины -->
+        <g fill="none" stroke="var(--accent)" stroke-width="1.4"
+           stroke-linejoin="round" stroke-linecap="round">
+            @for (int i = 0; i < Math.Min(_committedCount, _committedSvg.Count); i++)
+            {
+                <polyline @key="i" points="@_committedSvg[i]" />
+            }
+        </g>
+
+        <!-- Призрак: тот же силуэт, повёрнутый через transform -->
+        @if (_showGhost)
+        {
+            <g fill="none" stroke="var(--accent)" stroke-width="1.1"
+               stroke-opacity="0.5" stroke-dasharray="5 4"
+               stroke-linejoin="round" stroke-linecap="round"
+               transform="@GhostTransform">
+                @for (int i = 0; i < Math.Min(_committedCount, _committedSvg.Count); i++)
+                {
+                    <polyline @key="i" points="@_committedSvg[i]" />
+                }
+            </g>
+        }
     </svg>
 </div>
 
 <p class="text-muted small">
-    Показано точек: @VisibleCount из @AllPoints.Count
+    Уровень: @(Math.Max(0, _committedCount - 1)) · отрезков:
+    @((1 << Math.Max(0, _committedCount - 1)).ToString("N0")) из @SegmentsTotal.ToString("N0")
 </p>
 
 @code {
     private int Depth { get; set; } = 10;
-    private bool IsAnimating { get; set; }
-    private int VisibleCount { get; set; }
-    private List<Pt> AllPoints { get; set; } = new();
+    private int Speed { get; set; } = 5;
 
-    private const int AnimationFrames = 90;
-    private const int FrameDelayMs = 20;
+    private const int FramesPerLevel = 12;
 
-    private string PointsAttribute =>
-        string.Join(" ", AllPoints.Take(VisibleCount).Select(p =>
-            string.Create(CultureInfo.InvariantCulture, $"{p.X * 600:F1},{p.Y * 400:F1}")));
+    private List<string> _committedSvg = new();
+    private List<(double X, double Y)> _pivotsSvg = new();
 
-    protected override void OnInitialized()
+    private double _scale = 1, _offsetX, _offsetY;
+
+    // Начинаем с 0, чтобы при первом рендере ничего не отрисовывать до инициализации
+    private int _committedCount = 0;
+    private bool _showGhost;
+    private double _ghostAngleDeg;
+    private double _pivotSvgX, _pivotSvgY;
+
+    private CancellationTokenSource? _cts;
+
+    private int SegmentsTotal => 1 << Depth;
+    private int FrameDelayMs => Math.Max(2, 120 / Speed);
+
+    private string GhostTransform =>
+        string.Create(CultureInfo.InvariantCulture,
+            $"rotate({_ghostAngleDeg:F2} {_pivotSvgX:F1} {_pivotSvgY:F1})");
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        ShowInstant();
+        if (firstRender)
+            await RestartAsync();
     }
 
-    private void ShowInstant()
+    public void Dispose() => _cts?.Cancel();
+
+    private async Task OnDepthInput(ChangeEventArgs e)
     {
-        AllPoints = GeneratePoints(Depth);
-        VisibleCount = AllPoints.Count;
+        if (!int.TryParse(e.Value?.ToString(), out var d))
+            return;
+
+        d = Math.Clamp(d, 1, 15);
+        if (d == Depth)
+            return;
+
+        Depth = d;
+        await RestartAsync();
     }
 
-    private async Task BuildAnimated()
+    private void OnSpeedInput(ChangeEventArgs e)
     {
-        AllPoints = GeneratePoints(Depth);
-        VisibleCount = 0;
-        IsAnimating = true;
+        if (!int.TryParse(e.Value?.ToString(), out var s))
+            return;
 
-        int total = AllPoints.Count;
-        int batch = Math.Max(1, total / AnimationFrames);
+        Speed = Math.Clamp(s, 1, 10);
+        StateHasChanged();
+    }
 
-        while (VisibleCount < total)
+    private async Task RestartAsync()
+    {
+        _cts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _cts = cts;
+
+        try
         {
-            VisibleCount = Math.Min(total, VisibleCount + batch);
-            StateHasChanged();
-            await Task.Delay(FrameDelayMs);
+            await RunAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // анимация вытеснена более новой
+        }
+        finally
+        {
+            if (ReferenceEquals(_cts, cts))
+                _cts = null;
+            cts.Dispose();
+        }
+    }
+
+    private async Task RunAsync(CancellationToken token)
+    {
+        BuildScene(Depth, token);
+        token.ThrowIfCancellationRequested();
+
+        // Стартовое состояние: исходный отрезок.
+        _committedCount = 1;
+        _showGhost = false;
+        await InvokeAsync(StateHasChanged);
+
+        for (int level = 1; level <= Depth; level++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var (px, py) = _pivotsSvg[level];
+            _pivotSvgX = px;
+            _pivotSvgY = py;
+            _committedCount = level;
+            _showGhost = true;
+
+            for (int f = 1; f <= FramesPerLevel; f++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                _ghostAngleDeg = 90.0 * f / FramesPerLevel;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(FrameDelayMs, token);
+            }
+
+            // Фиксируем уровень
+            _showGhost = false;
+            _committedCount = level + 1;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void BuildScene(int depth, CancellationToken token)
+    {
+        var levelPoints = new List<List<Pt>>(depth + 1);
+        var pts = new List<Pt> { new(0, 0), new(1, 0) };
+        levelPoints.Add(pts);
+
+        double minX = 0, maxX = 1, minY = 0, maxY = 0;
+        void Include(double x, double y)
+        {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
         }
 
-        IsAnimating = false;
+        const int samples = 6;
+
+        for (int level = 1; level <= depth; level++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            foreach (var p in pts)
+                Include(p.X, p.Y);
+
+            var pivot = pts[^1];
+            for (int s = 1; s <= samples; s++)
+            {
+                double a = (Math.PI / 2) * s / samples;
+                double c = Math.Cos(a), si = Math.Sin(a);
+                foreach (var p in pts)
+                {
+                    double dx = p.X - pivot.X, dy = p.Y - pivot.Y;
+                    Include(pivot.X + dx * c - dy * si, pivot.Y + dx * si + dy * c);
+                }
+            }
+
+            var rot = RotateAll(pts, pivot, Math.PI / 2);
+            rot.Reverse();
+            var next = new List<Pt>(pts.Count + rot.Count - 1);
+            next.AddRange(pts);
+            next.AddRange(rot.Skip(1));
+            levelPoints.Add(next);
+            pts = next;
+        }
+
+        const double size = 600, pad = 30;
+        double w = Math.Max(maxX - minX, 1e-9);
+        double h = Math.Max(maxY - minY, 1e-9);
+        _scale = Math.Min((size - 2 * pad) / w, (size - 2 * pad) / h);
+        _offsetX = (size - _scale * w) / 2 - _scale * minX;
+        _offsetY = (size - _scale * h) / 2 - _scale * minY;
+
+        _committedSvg = new List<string>(depth + 1);
+        _pivotsSvg = new List<(double X, double Y)>(depth + 1);
+
+        _committedSvg.Add(ToSvgPoints(levelPoints[0]));
+        _pivotsSvg.Add((0, 0));
+
+        for (int k = 1; k <= depth; k++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var prev = levelPoints[k - 1];
+            var pivot = prev[^1];
+            var rot = RotateAll(prev, pivot, Math.PI / 2);
+
+            _committedSvg.Add(ToSvgPoints(rot));
+            _pivotsSvg.Add((_scale * pivot.X + _offsetX, _scale * pivot.Y + _offsetY));
+        }
+    }
+
+    private static List<Pt> RotateAll(List<Pt> pts, Pt pivot, double angle)
+    {
+        double cos = Math.Cos(angle), sin = Math.Sin(angle);
+        var result = new List<Pt>(pts.Count);
+
+        foreach (var p in pts)
+        {
+            double dx = p.X - pivot.X, dy = p.Y - pivot.Y;
+            result.Add(new Pt(
+                pivot.X + dx * cos - dy * sin,
+                pivot.Y + dx * sin + dy * cos));
+        }
+
+        return result;
+    }
+
+    private string ToSvgPoints(List<Pt> pts)
+    {
+        var sb = new System.Text.StringBuilder(pts.Count * 14);
+        for (int i = 0; i < pts.Count; i++)
+        {
+            if (i > 0) sb.Append(' ');
+            double x = _scale * pts[i].X + _offsetX;
+            double y = _scale * pts[i].Y + _offsetY;
+            sb.Append(x.ToString("F1", CultureInfo.InvariantCulture));
+            sb.Append(',');
+            sb.Append(y.ToString("F1", CultureInfo.InvariantCulture));
+        }
+        return sb.ToString();
     }
 
     private readonly record struct Pt(double X, double Y);
-
-    private static List<Pt> GeneratePoints(int depth)
-    {
-        var points = new List<Pt>();
-        var start = new Pt(0.2, 0.5);
-        var end = new Pt(0.8, 0.5);
-
-        points.Add(start);
-        Recurse(start, end, depth, 1, points);
-        points.Add(end);
-
-        return points;
-    }
-
-    // Рекурсивная триада:
-    // база — depth == 0, дальше не делим;
-    // декомпозиция — находим точку излома и рекурсивно строим обе половины.
-    private static void Recurse(Pt p1, Pt p2, int depth, int direction, List<Pt> points)
-    {
-        if (depth <= 0) return;
-
-        var mid = new Pt(
-            (p1.X + p2.X) / 2 + direction * (p2.Y - p1.Y) / 2,
-            (p1.Y + p2.Y) / 2 - direction * (p2.X - p1.X) / 2
-        );
-
-        Recurse(p1, mid, depth - 1, 1, points);
-        points.Add(mid);
-        Recurse(mid, p2, depth - 1, -1, points);
-    }
 }
