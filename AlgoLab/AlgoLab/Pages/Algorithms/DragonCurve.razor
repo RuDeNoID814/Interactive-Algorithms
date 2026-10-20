@@ -6,14 +6,14 @@
 <h3>Кривая дракона</h3>
 
 <p>
-    Фрактал строится итеративно: на каждом шаге текущий силуэт копируется,
-    поворачивается на 90° вокруг крайней точки и пристраивается к ней.
-    После n шагов получается 2ⁿ отрезков.
+    Фрактал строится рекурсивно: уровень n собирается из уровня n−1 — тот же силуэт
+    копируется, поворачивается на 90° вокруг последней точки и пристраивается к ней.
+    После n уровней рекурсии получается 2ⁿ отрезков.
 </p>
 
 <div class="alert alert-info">
     <strong>Сложность:</strong> O(2ⁿ) — на глубине n получается 2ⁿ отрезков<br />
-    <strong>Память:</strong> O(2ⁿ)
+    <strong>Глубина рекурсии:</strong> O(n), <strong>Память:</strong> O(2ⁿ)
 </div>
 
 <hr />
@@ -185,9 +185,13 @@
 
     private void BuildScene(int depth, CancellationToken token)
     {
+        // Рекурсивная триада:
+        // параметризация — level, глубина текущего уровня фрактала;
+        // база — level == 0, исходный единичный отрезок;
+        // декомпозиция — строим level-1, затем достраиваем его копией,
+        // повёрнутой на 90° вокруг последней точки.
         var levelPoints = new List<List<Pt>>(depth + 1);
-        var pts = new List<Pt> { new(0, 0), new(1, 0) };
-        levelPoints.Add(pts);
+        BuildLevelsRecursive(depth, levelPoints, token);
 
         double minX = 0, maxX = 1, minY = 0, maxY = 0;
         void Include(double x, double y)
@@ -204,6 +208,7 @@
         {
             token.ThrowIfCancellationRequested();
 
+            var pts = levelPoints[level - 1];
             foreach (var p in pts)
                 Include(p.X, p.Y);
 
@@ -218,15 +223,9 @@
                     Include(pivot.X + dx * c - dy * si, pivot.Y + dx * si + dy * c);
                 }
             }
-
-            var rot = RotateAll(pts, pivot, Math.PI / 2);
-            rot.Reverse();
-            var next = new List<Pt>(pts.Count + rot.Count - 1);
-            next.AddRange(pts);
-            next.AddRange(rot.Skip(1));
-            levelPoints.Add(next);
-            pts = next;
         }
+        foreach (var p in levelPoints[depth])
+            Include(p.X, p.Y);
 
         const double size = 600, pad = 30;
         double w = Math.Max(maxX - minX, 1e-9);
@@ -252,6 +251,29 @@
             _committedSvg.Add(ToSvgPoints(rot));
             _pivotsSvg.Add((_scale * pivot.X + _offsetX, _scale * pivot.Y + _offsetY));
         }
+    }
+
+    private static void BuildLevelsRecursive(int level, List<List<Pt>> levels, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+
+        if (level == 0)
+        {
+            levels.Add(new List<Pt> { new(0, 0), new(1, 0) });
+            return;
+        }
+
+        BuildLevelsRecursive(level - 1, levels, token);
+
+        var prev = levels[^1];
+        var pivot = prev[^1];
+        var rot = RotateAll(prev, pivot, Math.PI / 2);
+        rot.Reverse();
+
+        var next = new List<Pt>(prev.Count + rot.Count - 1);
+        next.AddRange(prev);
+        next.AddRange(rot.Skip(1));
+        levels.Add(next);
     }
 
     private static List<Pt> RotateAll(List<Pt> pts, Pt pivot, double angle)
