@@ -127,7 +127,7 @@
                 type: "scatter",
                 mode: expX.length > 150 ? "lines" : "lines+markers",
 
-                name: "Эксперимент",
+                name: options.experimentName || "Эксперимент",
 
                 line: {
                     color: "#2563eb",

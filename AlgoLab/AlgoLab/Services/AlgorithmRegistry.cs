@@ -201,6 +201,45 @@ public static class AlgorithmRegistry
             Formula = "2ⁿ−1 ходов",
             Laboratory = 2,
             CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Стек на связном списке",
+            Description = "Push, Pop, Top, isEmpty, Print: свой стек против Stack<T>",
+            Complexity = "O(1)",
+            ComplexityType = ComplexityType.Constant,
+            Slug = "stack",
+            Category = "Стек",
+            Formula = "LIFO",
+            Laboratory = 3,
+            CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Постфиксный калькулятор",
+            Description = "Вычисление постфиксной записи и перевод из инфиксной",
+            Complexity = "O(n)",
+            ComplexityType = ComplexityType.Linear,
+            Slug = "postfix",
+            Category = "Стек",
+            Formula = "7 8 + 3 2 + /",
+            Laboratory = 3,
+            CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Проверка баланса скобок",
+            Description = "Применение стека: парные скобки в тексте и коде",
+            Complexity = "O(n)",
+            ComplexityType = ComplexityType.Linear,
+            Slug = "brackets",
+            Category = "Применение стека",
+            Formula = "( [ { } ] )",
+            Laboratory = 3,
+            CanCompare = false
         }
     ];
 
