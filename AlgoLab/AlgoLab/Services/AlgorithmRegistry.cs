@@ -240,6 +240,32 @@ public static class AlgorithmRegistry
             Formula = "( [ { } ] )",
             Laboratory = 3,
             CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Очередь на связном списке",
+            Description = "Вставка, удаление, просмотр начала и сравнение с Queue<T>",
+            Complexity = "O(1)",
+            ComplexityType = ComplexityType.Constant,
+            Slug = "queue",
+            Category = "Очередь",
+            Formula = "FIFO",
+            Laboratory = 3,
+            CanCompare = false
+        },
+
+        new()
+        {
+            Name = "Round Robin — планировщик процессов",
+            Description = "Каждый процесс получает квант времени, затем возвращается в конец очереди",
+            Complexity = "O(s)",
+            ComplexityType = ComplexityType.Linear,
+            Slug = "round-robin",
+            Category = "Применение очереди",
+            Formula = "квант → хвост очереди",
+            Laboratory = 3,
+            CanCompare = false
         }
     ];
 

@@ -1,0 +1,378 @@
+@using System.Text
+@using AlgoLab.DataStructures
+@using AlgoLab.Services.Lab3
+@using AlgoLab.Components
+
+<h3>Очередь на связном списке</h3>
+
+<p>
+    Очередь — структура данных FIFO: первым пришёл — первым вышел. Здесь она реализована на собственном
+    односвязном списке (<code>LinkedQueue&lt;T&gt;</code>): элементы добавляются в хвост, а удаляются из головы,
+    поэтому вставка, удаление и просмотр начала выполняются за O(1) без перераспределения памяти.
+</p>
+
+<div class="alert alert-info">
+    <strong>Вставка / удаление / просмотр начала / isEmpty:</strong> O(1)<br />
+    <strong>Print:</strong> O(n) — нужно пройти по всем элементам<br />
+    <strong>Память:</strong> O(n), на каждый элемент — отдельный узел со ссылкой<br />
+    <strong>Пустая очередь:</strong> при добавлении первого элемента голова и хвост указывают на один узел;
+    при удалении последнего элемента хвост сбрасывается в <code>null</code>, иначе он остался бы ссылаться на удалённый узел.<br />
+    <strong>Сравнение:</strong> стандартная <code>Queue&lt;T&gt;</code> хранит элементы в кольцевом массиве —
+    меньше аллокаций и лучше локальность кэша, но вставка иногда копирует массив при расширении.
+</div>
+
+<hr />
+
+<h5>1. Выполнение команд из input.txt</h5>
+
+<p class="text-muted small">
+    Коды: <b>1,значение</b> — вставка, <b>2</b> — удаление, <b>3</b> — просмотр начала, <b>4</b> — isEmpty, <b>5</b> — Print.
+    Загрузите файл или введите команды вручную.
+</p>
+
+<div class="mb-2">
+    <InputFile OnChange="OnFileSelected" class="form-control" accept=".txt" />
+</div>
+
+<textarea class="form-control mb-2" rows="3" @bind="InputText" @bind:event="oninput"
+          placeholder="3 4 1,56 1,7 1,cat 2 5 4"></textarea>
+
+<button class="btn btn-primary me-2" @onclick="RunManual">Выполнить</button>
+<button class="btn btn-outline-secondary" @onclick="LoadExample">Пример из задания</button>
+
+@if (!string.IsNullOrEmpty(ManualError))
+{
+    <div class="alert alert-danger mt-3">@ManualError</div>
+}
+
+@if (ManualOutput.Count > 0)
+{
+    <div class="row mt-3">
+        <div class="col-md-8">
+            <h6>Результат каждой операции</h6>
+            <pre class="border rounded p-2 bg-light" style="max-height:260px; overflow:auto;">@string.Join("\n", ManualOutput)</pre>
+        </div>
+        <div class="col-md-4">
+            <h6>Время</h6>
+            <table class="table table-sm">
+                <tbody>
+                    <tr><td>Чтение файла</td><td>@Ms(ManualRead)</td></tr>
+                    <tr><td>Своя очередь</td><td>@Ms(ManualOwn)</td></tr>
+                    <tr><td>Queue&lt;T&gt;</td><td>@Ms(ManualStd)</td></tr>
+                </tbody>
+            </table>
+            <p class="text-muted small mb-0">Команд: @ManualCount</p>
+        </div>
+    </div>
+}
+
+<hr />
+
+<h5>2. Замеры: своя очередь и Queue&lt;T&gt;</h5>
+
+<p class="text-muted small">
+    Для обеих реализаций берётся один и тот же сгенерированный input.txt. Замеряется чтение
+    (разбор файла в команды) и выполнение команд. Наборы различаются по размеру и составу операций.
+</p>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимум операций</label>
+        <input type="number" min="1000" max="200000" step="1000" class="form-control"
+               @bind="MaxOps" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="500" step="500" class="form-control"
+               @bind="StepOps" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Запусков на точку</label>
+        <input type="number" min="1" max="20" class="form-control"
+               @bind="Runs" disabled="@Running" />
+    </div>
+</div>
+
+@if (MaxOps > 100000)
+{
+    <div class="alert alert-warning">
+        Набор «Много Print» при большом числе операций считается долго: каждый Print — O(n).
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(BenchError))
+{
+    <div class="alert alert-danger">@BenchError</div>
+}
+
+<button class="btn btn-success" @onclick="RunBenchmark" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить замеры")
+</button>
+
+@if (Running)
+{
+    <div class="progress mt-3" style="height:22px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             style="width:@(Progress.ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%">
+            @Progress.ToString("F0")%
+        </div>
+    </div>
+}
+
+@if (Rows.Count > 0)
+{
+    <div class="mt-4">
+        <label>График для набора:</label>
+        <select class="form-select mb-3" style="max-width:360px" @bind="SelectedMix" @bind:after="RebuildChart">
+            @for (int i = 0; i < QueueCommands.MixNames.Length; i++)
+            {
+                <option value="@i">@QueueCommands.MixNames[i]</option>
+            }
+        </select>
+
+        <ComplexityChart Experimental="@OwnPoints"
+                         Approximation="@StdPoints"
+                         ExperimentName="Своя очередь (связный список)"
+                         ApproximationName="Queue<T>"
+                         Title="@($"Выполнение команд: {QueueCommands.MixNames[SelectedMix]}")"
+                         XAxisTitle="Число операций в input.txt"
+                         YAxisTitle="Время выполнения, мс"
+                         Height="480" />
+
+        <h6 class="mt-4">Таблица результатов (для отчёта)</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Набор</th>
+                        <th class="text-end">Операций</th>
+                        <th class="text-end">Чтение, мс</th>
+                        <th class="text-end">Своя очередь, мс</th>
+                        <th class="text-end">Queue&lt;T&gt;, мс</th>
+                        <th class="text-end">Своя / Queue&lt;T&gt;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Rows)
+                    {
+                        <tr>
+                            <td>@r.Mix</td>
+                            <td class="text-end">@r.Ops.ToString("N0")</td>
+                            <td class="text-end">@r.ReadMs.ToString("F3")</td>
+                            <td class="text-end">@r.OwnMs.ToString("F3")</td>
+                            <td class="text-end">@r.StdMs.ToString("F3")</td>
+                            <td class="text-end">@(r.StdMs > 0 ? (r.OwnMs / r.StdMs).ToString("F2") : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-secondary">
+            В наборе «Только вставка» очередь только растёт, и разница определяется стоимостью создания узлов
+            против записи в массив. В наборах с Print время растёт быстрее линейного: каждый Print обходит всю очередь,
+            то есть стоит O(n), а чем длиннее очередь, тем дороже каждая печать.
+        </div>
+    </div>
+}
+
+<hr />
+
+<h5>3. Применение: очередь печати</h5>
+
+<p>
+    Документы отправляются на печать в очередь. Принтер забирает их с начала, поэтому порядок обслуживания
+    совпадает с порядком добавления. Очередь реализована на том же <code>LinkedQueue&lt;T&gt;</code>.
+</p>
+
+<div class="row g-2 mb-2">
+    <div class="col-md-5">
+        <input class="form-control" @bind="NewDocument" @bind:event="oninput" @bind:after="ClearPrinterMessage"
+               @onkeydown="HandlePrinterKey" placeholder="Название документа" aria-label="Название документа" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary" @onclick="AddDocument">Добавить в очередь</button>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-success" @onclick="PrintNext">Напечатать следующий</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(PrinterMessage))
+{
+    <div class="alert alert-info">@PrinterMessage</div>
+}
+
+<p class="text-muted small">Документов в очереди: <b>@PrinterQueue.Count</b></p>
+
+@if (PrinterQueue.Count == 0)
+{
+    <div class="alert alert-secondary">Очередь печати пуста</div>
+}
+else
+{
+    <ol class="list-group list-group-numbered">
+        @foreach (var (document, index) in PrinterQueue.Select((document, index) => (document, index)))
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>@document</span>
+                @if (index == 0)
+                {
+                    <span class="badge bg-success">Следующий</span>
+                }
+            </li>
+        }
+    </ol>
+}
+
+@code {
+    private string InputText { get; set; } = "";
+    private string ManualError { get; set; } = "";
+    private List<string> ManualOutput { get; set; } = new();
+    private double ManualRead, ManualOwn, ManualStd;
+    private int ManualCount;
+
+    private int MaxOps { get; set; } = 50000;
+    private int StepOps { get; set; } = 10000;
+    private int Runs { get; set; } = 5;
+    private bool Running { get; set; }
+    private double Progress { get; set; }
+    private string BenchError { get; set; } = "";
+
+    private List<QueueBenchRow> Rows { get; set; } = new();
+    private int SelectedMix { get; set; }
+    private List<BenchmarkPoint> OwnPoints { get; set; } = new();
+    private List<BenchmarkPoint> StdPoints { get; set; } = new();
+
+    private readonly LinkedQueue<string> PrinterQueue = new();
+    private string NewDocument { get; set; } = "";
+    private string PrinterMessage { get; set; } = "";
+
+    private static string Ms(double v) => v.ToString("F3") + " мс";
+
+    private void LoadExample() => InputText = "3 4 1,56 1,7 1,cat 2 5 4";
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var stream = e.File.OpenReadStream(5 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            InputText = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            ManualError = "Не удалось прочитать файл: " + ex.Message;
+        }
+    }
+
+    private void RunManual()
+    {
+        ManualError = "";
+        ManualOutput = new();
+        try
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var cmds = QueueCommands.Parse(InputText);
+            sw.Stop();
+            ManualRead = sw.Elapsed.TotalMilliseconds;
+            ManualCount = cmds.Count;
+
+            // Вывод показываем для своей очереди (ограничиваем длину для больших файлов)
+            var lines = new List<string>();
+            sw.Restart();
+            QueueCommands.Execute(cmds, new MyQueueAdapter(), s => { if (lines.Count < 5000) lines.Add(s); });
+            sw.Stop();
+            ManualOwn = sw.Elapsed.TotalMilliseconds;
+            ManualOutput = lines;
+
+            sw.Restart();
+            QueueCommands.Execute(cmds, new StdQueueAdapter(), _ => { });
+            sw.Stop();
+            ManualStd = sw.Elapsed.TotalMilliseconds;
+        }
+        catch (Exception ex)
+        {
+            ManualError = ex.Message;
+        }
+    }
+
+    private async Task RunBenchmark()
+    {
+        if (Running) return;
+        BenchError = "";
+        if (MaxOps < 1 || StepOps < 1 || Runs < 1)
+        {
+            BenchError = "Все значения должны быть больше нуля.";
+            return;
+        }
+
+        Running = true;
+        Rows = new();
+        Progress = 0;
+        try
+        {
+            var sizes = new List<int>();
+            for (int n = StepOps; n <= MaxOps; n += StepOps) sizes.Add(n);
+            if (sizes.Count == 0) sizes.Add(MaxOps);
+
+            int total = sizes.Count * QueueCommands.MixNames.Length, done = 0;
+            for (int mix = 0; mix < QueueCommands.MixNames.Length; mix++)
+            {
+                foreach (var n in sizes)
+                {
+                    await Task.Yield(); // даём интерфейсу обновиться
+                    Rows.Add(QueueCommands.Measure(mix, n, Runs));
+                    done++;
+                    Progress = done * 100.0 / total;
+                    StateHasChanged();
+                }
+            }
+            SelectedMix = 0;
+            RebuildChart();
+        }
+        catch (Exception ex)
+        {
+            BenchError = ex.Message;
+        }
+        finally
+        {
+            Running = false;
+        }
+    }
+
+    private void RebuildChart()
+    {
+        var name = QueueCommands.MixNames[SelectedMix];
+        var rows = Rows.Where(r => r.Mix == name).ToList();
+        OwnPoints = rows.Select(r => new BenchmarkPoint { N = r.Ops, TimeMs = r.OwnMs }).ToList();
+        StdPoints = rows.Select(r => new BenchmarkPoint { N = r.Ops, TimeMs = r.StdMs }).ToList();
+    }
+
+    private void AddDocument()
+    {
+        var document = NewDocument.Trim();
+        if (document.Length == 0)
+        {
+            PrinterMessage = "Введите название документа.";
+            return;
+        }
+        PrinterQueue.Enqueue(document);
+        PrinterMessage = $"Документ «{document}» добавлен в конец очереди.";
+        NewDocument = "";
+    }
+
+    private void PrintNext()
+    {
+        PrinterMessage = PrinterQueue.TryDequeue(out var document)
+            ? $"Напечатан документ «{document}»."
+            : "Очередь пуста: печатать нечего.";
+    }
+
+    private void ClearPrinterMessage() => PrinterMessage = "";
+
+    private void HandlePrinterKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter") AddDocument();
+    }
+}

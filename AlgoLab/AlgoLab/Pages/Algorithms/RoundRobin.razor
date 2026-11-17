@@ -1,0 +1,429 @@
+@using System.Globalization
+@using AlgoLab.DataStructures
+@using AlgoLab.Services.Lab3
+@using AlgoLab.Components
+
+<h3>Round Robin — планировщик процессов</h3>
+
+<p>
+    Round Robin — алгоритм циклического планирования: процессор по очереди выдаёт каждому процессу квант времени.
+    Готовые процессы хранятся в очереди FIFO на собственном связном списке (<code>LinkedQueue&lt;T&gt;</code>):
+    планировщик берёт процесс из начала, выполняет его не дольше кванта, и если процесс не завершился,
+    возвращает его в конец очереди.
+</p>
+
+<div class="alert alert-info">
+    <strong>Структура:</strong> FIFO-очередь (взять из головы, вернуть в хвост)<br />
+    <strong>Квант:</strong> ограничивает время одного запуска процесса<br />
+    <strong>Сложность:</strong> O(s), где s — число квантов; каждая операция с очередью — O(1)<br />
+    <strong>Допущение:</strong> все процессы поступают в момент 0
+</div>
+
+<hr />
+
+<h5>1. Выполнение: процессы и квант времени</h5>
+
+<p class="text-muted small">
+    Добавьте процессы с названием и временем выполнения, задайте квант времени и нажмите «Выполнить».
+    Все процессы поступают в момент 0.
+</p>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Название процесса</label>
+        <input class="form-control" @bind="NewName" @bind:event="oninput" @onkeydown="HandleAddKey" placeholder="Например, P4" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Время выполнения</label>
+        <input class="form-control" type="number" min="1" @bind="NewBurst" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Квант времени</label>
+        <input class="form-control" type="number" min="1" @bind="Quantum" />
+    </div>
+</div>
+
+<button class="btn btn-outline-primary me-2" @onclick="AddProcess">Добавить процесс</button>
+<button class="btn btn-primary me-2" @onclick="Run">Выполнить</button>
+<button class="btn btn-outline-secondary" @onclick="Reset">Сбросить пример</button>
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert @(IsError ? "alert-danger" : "alert-info") mt-3">@Message</div>
+}
+
+<div class="table-responsive mt-3">
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr><th>Процесс</th><th class="text-end">CPU-время</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var process in Processes)
+            {
+                <tr><td>@process.Name</td><td class="text-end">@process.Burst</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (HasRun)
+{
+    <h6 class="mt-4">Шкала выполнения</h6>
+    <p class="text-muted small">
+        Каждый блок — один квант процессорного времени. Ширина блока пропорциональна длительности.
+    </p>
+
+    <div class="d-flex border rounded p-1 mb-3" style="overflow-x:auto; gap:2px;" aria-label="Порядок выполнения процессов">
+        @foreach (var slice in Slices)
+        {
+            <div class="border rounded bg-light text-center px-1" style="flex-grow:@slice.Duration; min-width:56px;"
+                 title="@slice.Name: @slice.Start–@slice.End">
+                <strong>@slice.Name</strong><br />
+                <small class="text-muted">@slice.Start–@slice.End</small>
+            </div>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <h6>Журнал</h6>
+            <pre class="border rounded p-2 bg-light" style="max-height:260px; overflow:auto;">@string.Join("\n", Log)</pre>
+        </div>
+        <div class="col-md-4">
+            <h6>Итоги</h6>
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Процесс</th>
+                        <th class="text-end">Завершение</th>
+                        <th class="text-end">Ожидание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var result in Results)
+                    {
+                        <tr>
+                            <td>@result.Name</td>
+                            <td class="text-end">@result.Completion</td>
+                            <td class="text-end">@result.Waiting</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="text-muted small mb-0">Ожидание = завершение − CPU-время.</p>
+        </div>
+    </div>
+}
+
+<hr />
+
+<h5>2. Замеры: своя очередь и Queue&lt;T&gt;</h5>
+
+<p class="text-muted small">
+    Для обеих реализаций берётся один и тот же сгенерированный набор процессов (время выполнения от 1 до 20).
+    Замеряется работа планировщика целиком: очередь готовых процессов на связном списке и на <code>Queue&lt;T&gt;</code>.
+    Наборы различаются по числу процессов и по кванту времени: чем меньше квант, тем чаще процесс возвращается в хвост очереди.
+</p>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимум процессов</label>
+        <input type="number" min="1000" max="200000" step="1000" class="form-control"
+               @bind="MaxProcesses" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="500" step="500" class="form-control"
+               @bind="StepProcesses" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Запусков на точку</label>
+        <input type="number" min="1" max="20" class="form-control"
+               @bind="Runs" disabled="@Running" />
+    </div>
+</div>
+
+@if (MaxProcesses > 100000)
+{
+    <div class="alert alert-warning">
+        При большом числе процессов и кванте 1 замеры считаются долго: число квантов растёт пропорционально сумме времён выполнения.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(BenchError))
+{
+    <div class="alert alert-danger">@BenchError</div>
+}
+
+<button class="btn btn-success" @onclick="RunBenchmark" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить замеры")
+</button>
+
+@if (Running)
+{
+    <div class="progress mt-3" style="height:22px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             style="width:@(Progress.ToString("F0", CultureInfo.InvariantCulture))%">
+            @Progress.ToString("F0")%
+        </div>
+    </div>
+}
+
+@if (Rows.Count > 0)
+{
+    <div class="mt-4">
+        <label>График для набора:</label>
+        <select class="form-select mb-3" style="max-width:360px" @bind="SelectedMix" @bind:after="RebuildChart">
+            @for (int i = 0; i < RoundRobinBench.MixNames.Length; i++)
+            {
+                <option value="@i">@RoundRobinBench.MixNames[i]</option>
+            }
+        </select>
+
+        <ComplexityChart Experimental="@OwnPoints"
+                         Approximation="@StdPoints"
+                         ExperimentName="Своя очередь (связный список)"
+                         ApproximationName="Queue<T>"
+                         Title="@($"Round Robin: {RoundRobinBench.MixNames[SelectedMix]}")"
+                         XAxisTitle="Число процессов"
+                         YAxisTitle="Время выполнения, мс"
+                         Height="480" />
+
+        <h6 class="mt-4">Таблица результатов (для отчёта)</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Набор</th>
+                        <th class="text-end">Процессов</th>
+                        <th class="text-end">Квантов</th>
+                        <th class="text-end">Своя очередь, мс</th>
+                        <th class="text-end">Queue&lt;T&gt;, мс</th>
+                        <th class="text-end">Своя / Queue&lt;T&gt;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Rows)
+                    {
+                        <tr>
+                            <td>@r.Mix</td>
+                            <td class="text-end">@r.Processes.ToString("N0")</td>
+                            <td class="text-end">@r.Quanta.ToString("N0")</td>
+                            <td class="text-end">@r.OwnMs.ToString("F3")</td>
+                            <td class="text-end">@r.StdMs.ToString("F3")</td>
+                            <td class="text-end">@(r.StdMs > 0 ? (r.OwnMs / r.StdMs).ToString("F2") : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-secondary">
+            Время работы Round Robin растёт линейно с числом квантов: каждый квант — это одно удаление из очереди и,
+            если процесс не завершился, одна вставка. При меньшем кванте квантов больше, поэтому набор «Квант 1» самый долгий.
+            Своя очередь создаёт новый узел при каждом возврате процесса в хвост, а <code>Queue&lt;T&gt;</code> пишет в массив.
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<ProcessInput> Processes =
+    [
+        new("P1", 5),
+        new("P2", 3),
+        new("P3", 7)
+    ];
+
+    private string NewName { get; set; } = "";
+    private int NewBurst { get; set; } = 4;
+    private int Quantum { get; set; } = 2;
+    private string Message { get; set; } = "";
+    private bool IsError { get; set; }
+    private bool HasRun { get; set; }
+    private List<ExecutionSlice> Slices { get; set; } = [];
+    private List<string> Log { get; set; } = [];
+    private List<ProcessResult> Results { get; set; } = [];
+
+    private int MaxProcesses { get; set; } = 50000;
+    private int StepProcesses { get; set; } = 10000;
+    private int Runs { get; set; } = 5;
+    private bool Running { get; set; }
+    private double Progress { get; set; }
+    private string BenchError { get; set; } = "";
+
+    private List<RoundRobinBenchRow> Rows { get; set; } = new();
+    private int SelectedMix { get; set; }
+    private List<BenchmarkPoint> OwnPoints { get; set; } = new();
+    private List<BenchmarkPoint> StdPoints { get; set; } = new();
+
+    private async Task RunBenchmark()
+    {
+        if (Running) return;
+        BenchError = "";
+        if (MaxProcesses < 1 || StepProcesses < 1 || Runs < 1)
+        {
+            BenchError = "Все значения должны быть больше нуля.";
+            return;
+        }
+
+        Running = true;
+        Rows = new();
+        Progress = 0;
+        try
+        {
+            var sizes = new List<int>();
+            for (int n = StepProcesses; n <= MaxProcesses; n += StepProcesses) sizes.Add(n);
+            if (sizes.Count == 0) sizes.Add(MaxProcesses);
+
+            int total = sizes.Count * RoundRobinBench.MixNames.Length, done = 0;
+            for (int mix = 0; mix < RoundRobinBench.MixNames.Length; mix++)
+            {
+                foreach (var n in sizes)
+                {
+                    await Task.Yield(); // даём интерфейсу обновиться
+                    Rows.Add(RoundRobinBench.Measure(mix, n, Runs));
+                    done++;
+                    Progress = done * 100.0 / total;
+                    StateHasChanged();
+                }
+            }
+            SelectedMix = 0;
+            RebuildChart();
+        }
+        catch (Exception ex)
+        {
+            BenchError = ex.Message;
+        }
+        finally
+        {
+            Running = false;
+        }
+    }
+
+    private void RebuildChart()
+    {
+        var name = RoundRobinBench.MixNames[SelectedMix];
+        var rows = Rows.Where(r => r.Mix == name).ToList();
+        OwnPoints = rows.Select(r => new BenchmarkPoint { N = r.Processes, TimeMs = r.OwnMs }).ToList();
+        StdPoints = rows.Select(r => new BenchmarkPoint { N = r.Processes, TimeMs = r.StdMs }).ToList();
+    }
+
+    private void AddProcess()
+    {
+        var name = NewName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ShowError("Укажи название процесса.");
+            return;
+        }
+
+        if (Processes.Any(process => string.Equals(process.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            ShowError("Процесс с таким названием уже есть.");
+            return;
+        }
+
+        if (NewBurst <= 0)
+        {
+            ShowError("Время выполнения должно быть больше нуля.");
+            return;
+        }
+
+        Processes.Add(new ProcessInput(name, NewBurst));
+        NewName = "";
+        Message = $"Процесс {name} добавлен в исходный список.";
+        IsError = false;
+        HasRun = false;
+    }
+
+    private void Run()
+    {
+        if (Processes.Count == 0)
+        {
+            ShowError("Добавь хотя бы один процесс.");
+            return;
+        }
+
+        if (Quantum <= 0)
+        {
+            ShowError("Квант времени должен быть больше нуля.");
+            return;
+        }
+
+        var ready = new LinkedQueue<ReadyProcess>();
+        foreach (var process in Processes)
+        {
+            ready.Enqueue(new ReadyProcess(process, process.Burst));
+        }
+
+        var completionTimes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var slices = new List<ExecutionSlice>();
+        var log = new List<string>();
+        var currentTime = 0;
+
+        while (ready.TryDequeue(out var processState))
+        {
+            var remainingBefore = processState.Remaining;
+            var duration = Math.Min(Quantum, remainingBefore);
+            var start = currentTime;
+            currentTime += duration;
+            processState.Remaining -= duration;
+            slices.Add(new ExecutionSlice(processState.Process.Name, start, currentTime, duration));
+
+            if (processState.Remaining > 0)
+            {
+                ready.Enqueue(processState);
+                log.Add($"{start}–{currentTime}: {processState.Process.Name} использовал квант {duration}; осталось {processState.Remaining}. Процесс возвращён в хвост очереди.");
+            }
+            else
+            {
+                completionTimes[processState.Process.Name] = currentTime;
+                log.Add($"{start}–{currentTime}: {processState.Process.Name} завершился.");
+            }
+        }
+
+        Slices = slices;
+        Log = log;
+        Results = Processes.Select(process =>
+        {
+            var completion = completionTimes[process.Name];
+            return new ProcessResult(process.Name, process.Burst, completion, completion - process.Burst);
+        }).ToList();
+        Message = $"Готово: выполнено {Slices.Count.ToString("N0", CultureInfo.InvariantCulture)} квантов, общее время — {currentTime}.";
+        IsError = false;
+        HasRun = true;
+    }
+
+    private void Reset()
+    {
+        Processes.Clear();
+        Processes.AddRange([new ProcessInput("P1", 5), new ProcessInput("P2", 3), new ProcessInput("P3", 7)]);
+        NewName = "";
+        NewBurst = 4;
+        Quantum = 2;
+        Message = "Пример восстановлен.";
+        IsError = false;
+        HasRun = false;
+    }
+
+    private void ShowError(string message)
+    {
+        Message = message;
+        IsError = true;
+        HasRun = false;
+    }
+
+    private void HandleAddKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter") AddProcess();
+    }
+
+    private sealed record ProcessInput(string Name, int Burst);
+    private sealed class ReadyProcess(ProcessInput process, int remaining)
+    {
+        public ProcessInput Process { get; } = process;
+        public int Remaining { get; set; } = remaining;
+    }
+    private sealed record ExecutionSlice(string Name, int Start, int End, int Duration);
+    private sealed record ProcessResult(string Name, int Burst, int Completion, int Waiting);
+}
