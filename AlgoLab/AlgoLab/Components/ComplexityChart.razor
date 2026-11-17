@@ -54,6 +54,11 @@
 
 
     [Parameter]
+    public string ExperimentName { get; set; }
+        = "Эксперимент";
+
+
+    [Parameter]
     public string XAxisTitle { get; set; }
         = "Размер входных данных n";
 
@@ -151,6 +156,9 @@
 
                     approximationName =
                         ApproximationName,
+
+                    experimentName =
+                        ExperimentName,
 
                     xTitle =
                         XAxisTitle,

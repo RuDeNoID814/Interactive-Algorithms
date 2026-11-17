@@ -1,0 +1,248 @@
+@using System.Diagnostics
+@using AlgoLab.Services.Lab3
+@using AlgoLab.Components
+
+<h3>Постфиксный калькулятор</h3>
+
+<p>
+    В постфиксной (обратной польской) записи оператор стоит после операндов, скобки не нужны:
+    <code>7 8 + 3 2 + :</code> = (7+8)/(3+2). Алгоритм читает токены слева направо: число кладёт в стек,
+    оператор снимает нужное число операндов, вычисляет и кладёт результат обратно.
+</p>
+
+<div class="alert alert-info">
+    <strong>Поддерживаются:</strong> <code>+ − * : / ^ ln cos sin sqrt</code> (углы в радианах)<br />
+    <strong>Сложность:</strong> O(n) по числу токенов — каждый токен обрабатывается один раз,
+    Push/Pop за O(1)<br />
+    <strong>Память:</strong> O(n) в худшем случае (все операнды подряд)
+</div>
+
+<hr />
+
+<h5>1. Вычисление</h5>
+
+<div class="mb-2">
+    <InputFile OnChange="OnFileSelected" class="form-control" accept=".txt" />
+</div>
+<input class="form-control mb-2" @bind="Postfix" @bind:event="oninput" placeholder="7 8 + 3 2 + :" />
+
+<button class="btn btn-primary me-2" @onclick="Calculate">Вычислить</button>
+<button class="btn btn-outline-secondary" @onclick="@(() => Postfix = "7 8 + 3 2 + /")">Пример из задания</button>
+
+@if (!string.IsNullOrEmpty(CalcError))
+{
+    <div class="alert alert-danger mt-3">@CalcError</div>
+}
+else if (Result is not null)
+{
+    <div class="alert alert-success mt-3">
+        Результат: <strong>@ExpressionService.Fmt(Result.Value)</strong>
+    </div>
+
+    <div class="table-responsive" style="max-height:320px; overflow:auto;">
+        <table class="table table-sm table-striped">
+            <thead><tr><th>Токен</th><th>Действие</th><th>Стек (основание → вершина)</th></tr></thead>
+            <tbody>
+                @foreach (var s in Result.Steps)
+                {
+                    <tr><td><code>@s.Token</code></td><td>@s.Action</td><td><code>@s.StackState</code></td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<hr />
+
+<h5>2. Перевод инфиксной записи в постфиксную</h5>
+
+<p class="text-muted small">
+    Алгоритм сортировочной станции (Дейкстра): операнды сразу идут в выход, операторы ждут в стеке, пока
+    не придёт оператор с меньшим или равным приоритетом. Приоритеты: <code>+ −</code> (1) &lt;
+    <code>* / :</code> (2) &lt; унарный минус (3) &lt; <code>^</code> (4, правоассоциативна); функции — выше всех.
+</p>
+
+<input class="form-control mb-2" @bind="Infix" @bind:event="oninput" placeholder="(7+8)/(3+2)" />
+<button class="btn btn-primary me-2" @onclick="Convert">Перевести</button>
+<button class="btn btn-outline-secondary" @onclick="@(() => Infix = "(7+8)/(3+2)")">Пример</button>
+
+@if (!string.IsNullOrEmpty(ConvError))
+{
+    <div class="alert alert-danger mt-3">@ConvError</div>
+}
+else if (!string.IsNullOrEmpty(ConvResult))
+{
+    <div class="alert alert-success mt-3">
+        Постфиксная запись: <code>@ConvResult</code>
+        <button class="btn btn-sm btn-outline-success ms-3"
+                @onclick="@(() => { Postfix = ConvResult; Calculate(); })">
+            Вычислить →
+        </button>
+    </div>
+}
+
+<hr />
+
+<h5>3. Оценка сложности (эксперимент)</h5>
+
+<p class="text-muted small">
+    Генерируются случайные корректные выражения из n операндов и n−1 операций (+, −, *);
+    замеряется время вычисления. Ожидается линейная зависимость T(n) ≈ C·n.
+</p>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label>Максимальное n</label>
+        <input type="number" min="100" max="1000000" class="form-control" @bind="MaxN" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Шаг</label>
+        <input type="number" min="1" class="form-control" @bind="StepN" disabled="@Running" />
+    </div>
+    <div class="col-md-4 mb-3">
+        <label>Запусков</label>
+        <input type="number" min="1" max="50" class="form-control" @bind="Runs" disabled="@Running" />
+    </div>
+</div>
+
+<button class="btn btn-success" @onclick="RunExperiment" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить эксперимент")
+</button>
+
+@if (Running)
+{
+    <div class="progress mt-3" style="height:22px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             style="width:@(Progress.ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%">
+            @Progress.ToString("F0")%
+        </div>
+    </div>
+}
+
+@if (Points.Count > 0)
+{
+    <div class="mt-4">
+        <ComplexityChart Experimental="@Points"
+                         Approximation="@Approx.Points"
+                         Title="Постфиксные вычисления — временная сложность"
+                         ApproximationName="Аппроксимация C·n"
+                         XAxisTitle="Число операндов n"
+                         YAxisTitle="Среднее время выполнения, мс"
+                         Height="480" />
+
+        <div class="alert alert-light border mt-3">
+            <strong>Аппроксимация:</strong> T(n) ≈ @Approx.Coefficient.ToString("G6") · n,
+            R² = @Approx.R2.ToString("F4")
+        </div>
+        <div class="alert alert-secondary">
+            Выражение из n операндов содержит 2n−1 токен, каждый обрабатывается за O(1),
+            следовательно итоговая сложность — <strong>O(n)</strong>.
+        </div>
+    </div>
+}
+
+@code {
+    private string Postfix { get; set; } = "";
+    private string CalcError { get; set; } = "";
+    private PostfixResult? Result { get; set; }
+
+    private string Infix { get; set; } = "";
+    private string ConvResult { get; set; } = "";
+    private string ConvError { get; set; } = "";
+
+    private int MaxN { get; set; } = 100000;
+    private int StepN { get; set; } = 5000;
+    private int Runs { get; set; } = 5;
+    private bool Running { get; set; }
+    private double Progress { get; set; }
+    private List<BenchmarkPoint> Points { get; set; } = new();
+    private ApproximationResult Approx { get; set; } = new();
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var stream = e.File.OpenReadStream(5 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            Postfix = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            CalcError = "Не удалось прочитать файл: " + ex.Message;
+        }
+    }
+
+    private void Calculate()
+    {
+        CalcError = "";
+        Result = null;
+        try
+        {
+            Result = ExpressionService.EvaluatePostfix(Postfix);
+        }
+        catch (Exception ex)
+        {
+            CalcError = ex.Message;
+        }
+    }
+
+    private void Convert()
+    {
+        ConvError = "";
+        ConvResult = "";
+        try
+        {
+            ConvResult = ExpressionService.InfixToPostfix(Infix);
+        }
+        catch (Exception ex)
+        {
+            ConvError = ex.Message;
+        }
+    }
+
+    private async Task RunExperiment()
+    {
+        if (Running) return;
+        if (MaxN < 1 || StepN < 1 || Runs < 1) return;
+
+        Running = true;
+        Points = new();
+        try
+        {
+            var sizes = new List<int>();
+            for (int n = StepN; n <= MaxN; n += StepN) sizes.Add(n);
+            if (sizes.Count == 0) sizes.Add(MaxN);
+
+            var points = new List<BenchmarkPoint>();
+            var rnd = new Random(42);
+            for (int k = 0; k < sizes.Count; k++)
+            {
+                int n = sizes[k];
+                var expr = ExpressionService.GeneratePostfix(n, rnd);
+                double total = 0;
+                for (int r = 0; r < Runs; r++)
+                {
+                    var sw = Stopwatch.StartNew();
+                    ExpressionService.EvaluatePostfix(expr, trace: false);
+                    sw.Stop();
+                    total += sw.Elapsed.TotalMilliseconds;
+                }
+                points.Add(new BenchmarkPoint { N = n, TimeMs = total / Runs });
+                Progress = (k + 1) * 100.0 / sizes.Count;
+                StateHasChanged();
+                await Task.Yield();
+            }
+
+            Approx = ApproximationService.Fit(points, ComplexityType.Linear);
+            Points = points;
+        }
+        catch (Exception ex)
+        {
+            CalcError = ex.Message;
+        }
+        finally
+        {
+            Running = false;
+        }
+    }
+}
