@@ -1,4 +1,3 @@
-@using System.Diagnostics
 @using Microsoft.JSInterop
 
 @inject ExperimentSaveService SaveService
@@ -712,7 +711,7 @@
 
 
         var sizes =
-            BuildValues(
+            MatrixBenchmark.BuildValues(
                 maxN2D,
                 step2D);
 
@@ -735,14 +734,14 @@
 
 
                 var a =
-                    GenerateMatrix(
+                    MatrixOperations.Generate(
                         n,
                         n,
                         random);
 
 
                 var b =
-                    GenerateMatrix(
+                    MatrixOperations.Generate(
                         n,
                         n,
                         random);
@@ -760,20 +759,8 @@
                         run;
 
 
-                    var sw =
-                        Stopwatch.StartNew();
-
-
-                    Multiply(
-                        a,
-                        b);
-
-
-                    sw.Stop();
-
-
                     total +=
-                        sw.Elapsed.TotalMilliseconds;
+                        MatrixBenchmark.MeasureMultiplication(a, b);
 
 
                     progress2D =
@@ -931,13 +918,13 @@
 
 
         surfaceN =
-            BuildValues(
+            MatrixBenchmark.BuildValues(
                 maxN3D,
                 stepN3D);
 
 
         surfaceM =
-            BuildValues(
+            MatrixBenchmark.BuildValues(
                 maxM3D,
                 stepM3D);
 
@@ -987,14 +974,14 @@
 
 
                     var a =
-                        GenerateMatrix(
+                        MatrixOperations.Generate(
                             n,
                             m,
                             random);
 
 
                     var b =
-                        GenerateMatrix(
+                        MatrixOperations.Generate(
                             m,
                             n,
                             random);
@@ -1012,20 +999,8 @@
                             run;
 
 
-                        var sw =
-                            Stopwatch.StartNew();
-
-
-                        Multiply(
-                            a,
-                            b);
-
-
-                        sw.Stop();
-
-
                         total +=
-                            sw.Elapsed.TotalMilliseconds;
+                        MatrixBenchmark.MeasureMultiplication(a, b);
 
 
                         progress3D =
@@ -1270,139 +1245,6 @@
 
             StateHasChanged();
         }
-    }
-
-
-    // =====================================================
-    // MATRIX
-    // =====================================================
-
-    private static double[,]
-        GenerateMatrix(
-            int rows,
-            int columns,
-            Random random)
-    {
-        var result =
-            new double[
-                rows,
-                columns];
-
-
-        for (int i = 0;
-             i < rows;
-             i++)
-        {
-            for (int j = 0;
-                 j < columns;
-                 j++)
-            {
-                result[i, j] =
-                    random.NextDouble()
-                    * 100;
-            }
-        }
-
-
-        return result;
-    }
-
-
-    private static double[,]
-        Multiply(
-            double[,] a,
-            double[,] b)
-    {
-        int rows =
-            a.GetLength(0);
-
-
-        int common =
-            a.GetLength(1);
-
-
-        if (common !=
-            b.GetLength(0))
-        {
-            throw new ArgumentException(
-                "Несовместимые размеры матриц.");
-        }
-
-
-        int columns =
-            b.GetLength(1);
-
-
-        var result =
-            new double[
-                rows,
-                columns];
-
-
-        for (int i = 0;
-             i < rows;
-             i++)
-        {
-            for (int j = 0;
-                 j < columns;
-                 j++)
-            {
-                double sum =
-                    0;
-
-
-                for (int k = 0;
-                     k < common;
-                     k++)
-                {
-                    sum +=
-                        a[i, k]
-                        *
-                        b[k, j];
-                }
-
-
-                result[i, j] =
-                    sum;
-            }
-        }
-
-
-        return result;
-    }
-
-
-    // =====================================================
-    // VALUES
-    // =====================================================
-
-    private static List<int>
-        BuildValues(
-            int maximum,
-            int step)
-    {
-        var result =
-            new List<int>();
-
-
-        for (int value = 1;
-             value <= maximum;
-             value += step)
-        {
-            result.Add(
-                value);
-        }
-
-
-        if (result.Count == 0 ||
-            result[^1] != maximum)
-        {
-            result.Add(
-                maximum);
-        }
-
-
-        return result;
     }
 
 

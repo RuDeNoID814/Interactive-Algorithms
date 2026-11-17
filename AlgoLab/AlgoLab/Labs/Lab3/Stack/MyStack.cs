@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace AlgoLab.Services.Lab3;
+namespace AlgoLab.Labs.Lab3.Stack;
 
 /// <summary>Стек на собственном односвязном списке. Голова списка = вершина стека.</summary>
 public sealed class MyStack<T>

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
-namespace AlgoLab.Services.Lab3;
+namespace AlgoLab.Labs.Lab3.Stack;
 
 public enum StackOp { Push = 1, Pop = 2, Top = 3, IsEmpty = 4, Print = 5 }
 
