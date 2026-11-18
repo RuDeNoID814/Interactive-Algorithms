@@ -1,0 +1,27 @@
+<div class="list-workbench">
+    <div class="workbench-tabs" aria-label="Разделы работы со списком и деревом">
+        @foreach (string section in Sections)
+        {
+            <button type="button" class="@(Section == section ? "selected" : "")"
+                    aria-pressed="@(Section == section)" @onclick="() => Section = section">@(section)</button>
+        }
+    </div>
+
+    @switch (Section)
+    {
+        case "Задания 1–12":
+            <ListExercises />
+            break;
+        case "Блокчейн":
+            <BlockchainDemo />
+            break;
+        case "HTML-дерево":
+            <HtmlTreeDemo />
+            break;
+    }
+</div>
+
+@code {
+    private static readonly string[] Sections = { "Задания 1–12", "Блокчейн", "HTML-дерево" };
+    private string Section = Sections[0];
+}

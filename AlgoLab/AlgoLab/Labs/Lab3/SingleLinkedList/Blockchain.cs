@@ -66,4 +66,16 @@ public class Blockchain
             current = current.Previous;
         }
     }
+
+    // Данные блоков для показа на странице, от последнего к первому.
+    public IEnumerable<(string Data, string Hash, string PreviousHash)> GetBlocks()
+    {
+        Block current = last;
+        while (current != null)
+        {
+            yield return (current.Data, current.Hash, current.PreviousHash);
+            current = current.Previous;
+        }
+    }
+
 }

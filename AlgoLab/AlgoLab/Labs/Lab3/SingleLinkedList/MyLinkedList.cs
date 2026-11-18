@@ -436,4 +436,16 @@ public class MyLinkedList
         }
         Console.WriteLine("null");
     }
+
+    // Передаём значения узлов интерфейсу сайта.
+    public IEnumerable<int> GetValues()
+    {
+        Node current = Head;
+        while (current != null)
+        {
+            yield return current.Data;
+            current = current.Next;
+        }
+    }
+
 }

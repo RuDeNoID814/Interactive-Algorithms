@@ -1,0 +1,90 @@
+<p class="hint">
+    Блоки образуют связный список. Каждый хранит данные, свой SHA-256, хеш предыдущего блока и ссылку Previous.
+    Цепочка выводится от последнего блока к первому.
+</p>
+<div class="practice-field">
+    <label for="chain-data">Данные блока</label>
+    <input id="chain-data" class="form-control" @bind="Data" @bind:event="oninput" maxlength="300" @onkeydown="HandleKey" />
+    <p class="hint">Введите текст, например «Максим отправил Никите 100». Один блок — одна запись, разделитель не нужен.</p>
+</div>
+<div class="practice-actions">
+    <button class="btn btn-primary" @onclick="Add" disabled="@(Blocks.Length >= 20)">Добавить блок</button>
+    <button class="btn btn-outline-secondary" @onclick="Example">Загрузить пример</button>
+    <button class="btn btn-outline-secondary" @onclick="Clear">Очистить цепочку</button>
+</div>
+@if (Error.Length > 0)
+{
+    <div class="alert alert-danger" role="alert">@Error</div>
+}
+<p role="status">@Message</p>
+@if (Blocks.Length == 0)
+{
+    <p class="hint">Цепочка пуста. Добавьте первый блок или загрузите пример.</p>
+}
+else
+{
+    <ol class="blocks" aria-label="Блоки от последнего к первому">
+        @for (int i = 0; i < Blocks.Length; i++)
+        {
+            var block = Blocks[i];
+            int number = Blocks.Length - i;
+            <li class="block">
+                <h3>Блок @number</h3>
+                <p class="data">@block.Data</p>
+                <dl>
+                    <dt>Хеш блока</dt>
+                    <dd><code>@block.Hash</code></dd>
+                    <dt>Хеш предыдущего</dt>
+                    <dd><code>@block.PreviousHash</code></dd>
+                </dl>
+                <p class="hint">@(number == 1 ? "Previous = null" : $"Previous → блок {number - 1}")</p>
+            </li>
+        }
+    </ol>
+}
+@code {
+    private Blockchain Chain = new();
+    private (string Data, string Hash, string PreviousHash)[] Blocks = Array.Empty<(string, string, string)>();
+    private string Data = "Максим отправил Никите 100";
+    private string Error = "";
+    private string Message = "";
+
+    private void Add()
+    {
+        Error = "";
+        if (string.IsNullOrWhiteSpace(Data))
+        {
+            Error = "Введите данные нового блока.";
+            return;
+        }
+        if (Blocks.Length >= 20)
+        {
+            Error = "Показано 20 блоков. Очистите цепочку для нового примера.";
+            return;
+        }
+        Chain.Add(Data.Trim());
+        Blocks = Chain.GetBlocks().ToArray();
+        Message = $"Добавлен блок {Blocks.Length}. Его Previous указывает на прежний последний блок.";
+    }
+    private void Clear()
+    {
+        Chain = new Blockchain();
+        Blocks = Chain.GetBlocks().ToArray();
+        Error = "";
+        Message = "Цепочка очищена.";
+    }
+    private void Example()
+    {
+        Clear();
+        Chain.Add("Создание цепочки");
+        Chain.Add("Максим отправил Никите 100");
+        Chain.Add("Никита отправил Даше 50");
+        Blocks = Chain.GetBlocks().ToArray();
+        Message = "Загружены три блока. PreviousHash каждого совпадает с Hash предыдущего.";
+    }
+    private void HandleKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+            Add();
+    }
+}

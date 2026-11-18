@@ -231,6 +231,19 @@ public static class AlgorithmRegistry
 
         new()
         {
+            Name = "Список",
+            Description = "Задания 1–12 на своём списке, блокчейн и HTML-дерево",
+            Complexity = "O(n) / O(n²)",
+            ComplexityType = ComplexityType.Linear,
+            Slug = "list",
+            Category = "Список и дерево",
+            Formula = "узлы и ссылки",
+            Laboratory = 3,
+            CanCompare = false
+        },
+
+        new()
+        {
             Name = "Проверка баланса скобок",
             Description = "Применение стека: парные скобки в тексте и коде",
             Complexity = "O(n)",

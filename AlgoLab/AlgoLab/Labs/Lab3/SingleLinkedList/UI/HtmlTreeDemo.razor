@@ -1,0 +1,74 @@
+<p class="hint">
+    Вставьте HTML с закрытыми тегами. Например, пишите &lt;br /&gt;.
+    Показываем иерархию элементов через XElement, текст внутри тегов в дерево не включается.
+</p>
+<div class="practice-field">
+    <label for="html-source">Разметка</label>
+    <textarea id="html-source" class="form-control" @bind="Source" @bind:event="oninput" @bind:after="ClearResult" maxlength="20000" spellcheck="false"></textarea>
+    <p class="hint">Один корневой элемент. Атрибуты заключайте в кавычки. Символ &amp; записывайте как &amp;amp;.</p>
+</div>
+<div class="practice-actions">
+    <button class="btn btn-primary" @onclick="Build">Построить дерево</button>
+    <button class="btn btn-outline-secondary" @onclick="Example">Загрузить пример</button>
+</div>
+@if (Error.Length > 0)
+{
+    <div class="alert alert-danger" role="alert">@Error</div>
+}
+@if (Root != null)
+{
+    <div class="result-section">
+        <h3>Дерево элементов</h3>
+        <p class="hint">Вложенные ветви показывают дочерние элементы. Нажмите название, чтобы свернуть ветвь.</p>
+        <HtmlElementView Element="Root" />
+    </div>
+}
+
+@code {
+    private const string Sample = "<html>\n  <head>\n    <title>Мой сайт</title>\n  </head>\n  <body>\n    <h1>Привет</h1>\n    <div id=\"content\">\n      <p>Текст страницы</p>\n    </div>\n  </body>\n</html>";
+    private string Source = Sample;
+    private string Error = "";
+    private System.Xml.Linq.XElement? Root;
+
+    private void ClearResult()
+    {
+        Error = "";
+        Root = null;
+    }
+    private void Example()
+    {
+        Source = Sample;
+        ClearResult();
+    }
+    private void Build()
+    {
+        ClearResult();
+        if (string.IsNullOrWhiteSpace(Source))
+        {
+            Error = "Введите разметку или загрузите пример.";
+            return;
+        }
+        if (Source.Length > 20000)
+        {
+            Error = "Для примера используйте разметку до 20 000 символов.";
+            return;
+        }
+        try
+        {
+            var tree = new HtmlTree();
+            tree.Build(Source);
+            var root = tree.GetRoot();
+            if (root.DescendantsAndSelf().Any(element => element.Ancestors().Take(41).Count() > 40))
+                throw new ArgumentException("Для показа используйте не более 40 уровней вложенности.");
+            Root = root;
+        }
+        catch (System.Xml.XmlException ex)
+        {
+            Error = $"Ошибка разметки в строке {ex.LineNumber}, позиция {ex.LinePosition}. Проверьте закрывающие теги и кавычки атрибутов.";
+        }
+        catch (ArgumentException ex)
+        {
+            Error = ex.Message;
+        }
+    }
+}

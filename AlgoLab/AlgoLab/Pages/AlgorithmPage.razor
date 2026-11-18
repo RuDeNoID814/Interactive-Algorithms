@@ -11,6 +11,7 @@
 @using AlgoLab.Labs.Lab3.Stack
 @using AlgoLab.Labs.Lab3.Stack.Calculator
 @using AlgoLab.Labs.Lab3.Stack.Brackets
+@using AlgoLab.Labs.Lab3.SingleLinkedList.UI
 
 @if (algo is null)
 {
@@ -103,6 +104,10 @@ else
         else if (Slug == "postfix")
         {
             <PostfixCalc />
+        }
+        else if (Slug == "list")
+        {
+            <ListWorkbench />
         }
         else if (Slug == "brackets")
         {

@@ -1,0 +1,8 @@
+.blocks { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
+.block { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.block h3 { font-size: 1.1rem; }
+.data { overflow-wrap: anywhere; }
+.block dl { margin-bottom: .5rem; font-size: .85rem; }
+.block dt { font-weight: 500; margin-top: .65rem; }
+.block dd { margin: .3rem 0; overflow-wrap: anywhere; }
+.block code { color: var(--ink-soft); }

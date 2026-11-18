@@ -1,0 +1,23 @@
+@using System.Xml.Linq
+
+@if (Element.HasElements)
+{
+    <details class="html-branch" open>
+        <summary><code>@Tag</code></summary>
+        <div class="html-children">
+            @foreach (XElement child in Element.Elements())
+            {
+                <HtmlElementView Element="child" />
+            }
+        </div>
+    </details>
+}
+else
+{
+    <div class="html-leaf"><code>@Tag</code></div>
+}
+
+@code {
+    [Parameter, EditorRequired] public XElement Element { get; set; } = default!;
+    private string Tag => "<" + Element.Name.LocalName + ">";
+}

@@ -1,0 +1,19 @@
+@if (Values.Count == 0)
+{
+    <p class="hint">Список пуст. Head = null.</p>
+}
+else
+{
+    <ol class="node-chain" aria-label="@Label">
+        @foreach (int value in Values)
+        {
+            <li><span class="node-value">@value</span><span class="node-arrow" aria-hidden="true">→</span></li>
+        }
+        <li><code>null</code></li>
+    </ol>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<int> Values { get; set; } = Array.Empty<int>();
+    [Parameter] public string Label { get; set; } = "Узлы списка";
+}

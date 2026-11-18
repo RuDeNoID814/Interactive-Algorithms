@@ -36,4 +36,10 @@ public class HtmlTree
             PrintNode(child, depth + 1);
         }
     }
+
+    public XElement GetRoot()
+    {
+        return Root;
+    }
+
 }
