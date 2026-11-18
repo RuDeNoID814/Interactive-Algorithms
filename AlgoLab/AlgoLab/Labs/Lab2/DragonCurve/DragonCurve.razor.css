@@ -1,0 +1,11 @@
+.dragon-canvas-wrap {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1rem;
+}
+.dragon-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}

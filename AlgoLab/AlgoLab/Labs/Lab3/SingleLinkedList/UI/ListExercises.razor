@@ -1,0 +1,292 @@
+<div class="practice-field">
+    <label for="list-task">Задание</label>
+    <select id="list-task" class="form-select" @bind="TaskNumber" @bind:after="LoadExample">
+        @for (int i = 0; i < Tasks.Length; i++)
+        {
+            <option value="@(i + 1)">@(i + 1). @Tasks[i]</option>
+        }
+    </select>
+</div>
+
+<p class="hint">@Descriptions[TaskNumber - 1]</p>
+
+<div class="practice-fields">
+    <div class="practice-field">
+        <label for="list-input">Исходный список L</label>
+        <input id="list-input" class="form-control" @bind="Numbers" @bind:event="oninput" @bind:after="ClearResult" aria-describedby="list-format" />
+        <p class="hint" id="list-format">Ставьте между значениями ; Например, 5;6;9. Пустое поле — пустой список. До 120 чисел.</p>
+    </div>
+    @if (NeedsValue)
+    {
+        <div class="practice-field">
+            <label for="list-value">@ValueLabel</label>
+            <input id="list-value" type="number" class="form-control" @bind="Value" @bind:after="ClearResult" />
+        </div>
+    }
+    @if (TaskNumber == 8 || TaskNumber == 12)
+    {
+        <div class="practice-field">
+            <label for="list-second-value">@(TaskNumber == 8 ? "Вставляемое число F" : "Второе значение")</label>
+            <input id="list-second-value" type="number" class="form-control" @bind="SecondValue" @bind:after="ClearResult" />
+        </div>
+    }
+    @if (TaskNumber == 2)
+    {
+        <div class="practice-field">
+            <label for="list-direction">Направление переноса</label>
+            <select id="list-direction" class="form-select" @bind="MoveToFront" @bind:after="ClearResult">
+                <option value="front">Последний в начало</option>
+                <option value="back">Первый в конец</option>
+            </select>
+        </div>
+    }
+    @if (TaskNumber == 9)
+    {
+        <div class="practice-field">
+            <label for="list-other">Второй список E</label>
+            <input id="list-other" class="form-control" @bind="OtherNumbers" @bind:event="oninput" @bind:after="ClearResult" />
+            <p class="hint">Разделитель — ; Например, 2;4;7.</p>
+        </div>
+    }
+</div>
+
+@if (TaskNumber == 9)
+{
+    <div class="practice-field">
+        <label for="list-file">Загрузить два списка из файла .txt</label>
+        <InputFile id="list-file" OnChange="LoadFile" accept=".txt" class="form-control" />
+        <p class="hint">Первая строка — L, вторая — E. Между числами ставьте ; Пустая строка задаёт пустой список.</p>
+        <details class="mt-2">
+            <summary>Пример содержимого файла</summary>
+            <pre>5;6;9
+2;4;7</pre>
+        </details>
+        @if (FileName.Length > 0)
+        {
+            <p class="hint" role="status">Загружен @FileName. Нажмите «Выполнить».</p>
+        }
+    </div>
+}
+
+<div class="practice-actions">
+    <button class="btn btn-primary" @onclick="Run">Выполнить</button>
+    <button class="btn btn-outline-secondary" @onclick="LoadExample">Загрузить пример</button>
+</div>
+
+@if (Error.Length > 0)
+{
+    <div class="alert alert-danger" role="alert">@Error</div>
+}
+@if (HasResult)
+{
+    <div class="result-section">
+        <h3>До выполнения</h3>
+        <ListValues Values="Before" Label="Исходный список" />
+        @if (TaskNumber == 9)
+        {
+            <h3>Второй список E</h3>
+            <ListValues Values="OtherBefore" Label="Добавляемый список" />
+        }
+        <h3>После выполнения</h3>
+        <ListValues Values="After" Label="Результат операции" />
+        @if (TaskNumber == 10)
+        {
+            <h3>Второй список</h3>
+            <ListValues Values="SecondResult" Label="Вторая часть списка" />
+        }
+        <p role="status">@Message</p>
+        <details>
+            <summary>Числа для копирования</summary>
+            <pre>@string.Join(";", After)</pre>
+            @if (TaskNumber == 10)
+            {
+                <pre>@string.Join(";", SecondResult)</pre>
+            }
+        </details>
+    </div>
+}
+
+@code {
+    private static readonly string[] Tasks =
+    {
+        "Развернуть список", "Перенести крайний элемент", "Количество различных значений",
+        "Удалить неуникальные элементы", "Вставить список в самого себя", "Вставить в упорядоченный список",
+        "Удалить все элементы E", "Вставить F перед первым E", "Дописать второй список",
+        "Разделить список", "Удвоить список", "Поменять два элемента"
+    };
+    private static readonly string[] Descriptions =
+    {
+        "Меняем направление ссылок между узлами.",
+        "Переносим один крайний узел на другой конец списка.",
+        "Считаем различные числа. Повторы учитываются один раз.",
+        "Удаляем все вхождения каждого повторяющегося числа.",
+        "После первого x вставляем копию всего исходного списка.",
+        "Исходные числа должны идти по неубыванию. Вставляем E с сохранением порядка.",
+        "Удаляем каждое вхождение E.",
+        "Вставляем F перед первым E. Если E отсутствует, список сохраняется.",
+        "Дописываем копию E в конец L. Загрузите два списка из файла или введите их в поля.",
+        "Разделяем по первому вхождению числа. В этой реализации разделитель исключается из обеих частей.",
+        "В конец дописываем копию исходного списка.",
+        "Меняем значения первых найденных узлов. Если одно значение отсутствует, список сохраняется."
+    };
+    private int TaskNumber = 1;
+    private string Numbers = "5;6;9";
+    private string OtherNumbers = "2;4;7";
+    private int Value = 6;
+    private int SecondValue = 10;
+    private string MoveToFront = "front";
+    private string Error = "";
+    private string Message = "";
+    private string FileName = "";
+    private bool HasResult;
+    private int[] Before = Array.Empty<int>();
+    private int[] After = Array.Empty<int>();
+    private int[] OtherBefore = Array.Empty<int>();
+    private int[] SecondResult = Array.Empty<int>();
+
+    private bool NeedsValue => TaskNumber is 5 or 6 or 7 or 8 or 10 or 12;
+    private string ValueLabel => TaskNumber switch
+    {
+        5 => "Число x, после которого вставить копию",
+        6 => "Вставляемое число E",
+        8 => "Перед каким числом E вставить",
+        10 => "Число-разделитель",
+        12 => "Первое значение",
+        _ => "Удаляемое число E"
+    };
+
+    private void ClearResult()
+    {
+        HasResult = false;
+        Error = "";
+    }
+
+    private void LoadExample()
+    {
+        Numbers = TaskNumber is 3 or 4 or 7 ? "5;6;5;9;7;8;4;0;5;8;4" : "5;6;9";
+        Value = TaskNumber == 7 ? 5 : 6;
+        SecondValue = TaskNumber == 12 ? 9 : 10;
+        OtherNumbers = "2;4;7";
+        MoveToFront = "front";
+        FileName = "";
+        ClearResult();
+    }
+
+    private static int[] Parse(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return Array.Empty<int>();
+
+        string[] parts = text.Split(';');
+        if (parts.Length > 120)
+            throw new ArgumentException("Введите до 120 чисел в каждом списке.");
+
+        var values = new int[parts.Length];
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (!int.TryParse(parts[i].Trim(), out values[i]))
+                throw new ArgumentException("Введите целые числа через ; без пустых значений. Например, 5;6;9.");
+        }
+        return values;
+    }
+
+    private static MyLinkedList Create(int[] values)
+    {
+        var list = new MyLinkedList();
+        foreach (int value in values)
+            list.Add(value);
+        return list;
+    }
+
+    private async Task LoadFile(InputFileChangeEventArgs args)
+    {
+        ClearResult();
+        FileName = "";
+        try
+        {
+            using var stream = args.File.OpenReadStream(64 * 1024);
+            using var reader = new StreamReader(stream);
+            string content = await reader.ReadToEndAsync();
+            string[] lines = content.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            // Допускаем один завершающий перевод строки в текстовом файле.
+            if (lines.Length == 3 && lines[2].Length == 0)
+                lines = lines.Take(2).ToArray();
+            if (lines.Length != 2)
+                throw new ArgumentException("В файле нужны ровно две строки — список L и список E.");
+
+            Parse(lines[0]);
+            Parse(lines[1]);
+            Numbers = lines[0];
+            OtherNumbers = lines[1];
+            FileName = args.File.Name;
+        }
+        catch (Exception ex)
+        {
+            Error = "Файл не загружен. " + ex.Message;
+        }
+    }
+
+    private void Run()
+    {
+        ClearResult();
+        try
+        {
+            int[] values = Parse(Numbers);
+            var list = Create(values);
+            int[] other = Array.Empty<int>();
+            int[] second = Array.Empty<int>();
+            string message = "Операция выполнена.";
+
+            switch (TaskNumber)
+            {
+                case 1: list.Reverse(); break;
+                case 2:
+                    if (MoveToFront == "front") list.MoveLastToFirst();
+                    else list.MoveFirstToLast();
+                    break;
+                case 3: message = "Количество различных значений — " + list.CountDistint() + "."; break;
+                case 4: list.RemoveNotUnique(); break;
+                case 5:
+                    list.InsertSelfAfter(Value);
+                    if (!values.Contains(Value)) message = "Число x отсутствует. Список сохранён.";
+                    break;
+                case 6:
+                    for (int i = 1; i < values.Length; i++)
+                        if (values[i] < values[i - 1])
+                            throw new ArgumentException("Для задания 6 задайте числа по неубыванию. Например, 2;4;4;8.");
+                    list.InsertSorted(Value);
+                    break;
+                case 7: list.RemoveAll(Value); break;
+                case 8:
+                    list.InsertBefore(Value, SecondValue);
+                    if (!values.Contains(Value)) message = "Число E отсутствует. Список сохранён.";
+                    break;
+                case 9:
+                    other = Parse(OtherNumbers);
+                    list.Append(Create(other));
+                    break;
+                case 10:
+                    second = list.Split(Value).GetValues().ToArray();
+                    if (!values.Contains(Value)) message = "Разделитель отсутствует. Первый список сохранён, второй пуст.";
+                    break;
+                case 11: list.Duplicate(); break;
+                case 12:
+                    list.Swap(Value, SecondValue);
+                    if (!values.Contains(Value) || !values.Contains(SecondValue))
+                        message = "Одно из значений отсутствует. Список сохранён.";
+                    break;
+            }
+
+            Before = values;
+            After = list.GetValues().ToArray();
+            OtherBefore = other;
+            SecondResult = second;
+            Message = message;
+            HasResult = true;
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+    }
+}

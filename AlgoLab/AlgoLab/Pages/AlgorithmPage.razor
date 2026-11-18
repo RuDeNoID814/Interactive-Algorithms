@@ -1,4 +1,17 @@
 @page "/algorithm/{Slug}"
+@using AlgoLab.Labs.Lab1.Basics
+@using AlgoLab.Labs.Lab1.Graphs
+@using AlgoLab.Labs.Lab1.Matrix
+@using AlgoLab.Labs.Lab1.Polynomials
+@using AlgoLab.Labs.Lab1.Powers
+@using AlgoLab.Labs.Lab1.Sorting
+@using AlgoLab.Labs.Lab1
+@using AlgoLab.Labs.Lab2.DragonCurve
+@using AlgoLab.Labs.Lab2.HanoiTowers
+@using AlgoLab.Labs.Lab3.Stack
+@using AlgoLab.Labs.Lab3.Stack.Calculator
+@using AlgoLab.Labs.Lab3.Stack.Brackets
+@using AlgoLab.Labs.Lab3.SingleLinkedList.UI
 
 @if (algo is null)
 {
@@ -91,6 +104,10 @@ else
         else if (Slug == "postfix")
         {
             <PostfixCalc />
+        }
+        else if (Slug == "list")
+        {
+            <ListWorkbench />
         }
         else if (Slug == "brackets")
         {

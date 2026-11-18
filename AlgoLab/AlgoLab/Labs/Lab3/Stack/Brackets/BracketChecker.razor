@@ -1,4 +1,3 @@
-@using AlgoLab.Services.Lab3
 
 <h3>Проверка баланса скобок</h3>
 
@@ -49,7 +48,7 @@
 
 @code {
     private string Text { get; set; } = "";
-    private ExpressionService.BracketResult? Result { get; set; }
+    private BracketValidator.BracketResult? Result { get; set; }
 
-    private void Check() => Result = ExpressionService.CheckBrackets(Text);
+    private void Check() => Result = BracketValidator.CheckBrackets(Text);
 }
