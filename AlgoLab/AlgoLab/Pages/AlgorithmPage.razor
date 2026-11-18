@@ -12,6 +12,7 @@
 @using AlgoLab.Labs.Lab3.Stack.Calculator
 @using AlgoLab.Labs.Lab3.Stack.Brackets
 @using AlgoLab.Labs.Lab3.SingleLinkedList.UI
+@using AlgoLab.Labs.Lab3.Queue.UI
 
 @if (algo is null)
 {
@@ -112,6 +113,14 @@ else
         else if (Slug == "brackets")
         {
             <BracketChecker />
+        }
+        else if (Slug == "queue")
+        {
+            <QueuePage />
+        }
+        else if (Slug == "round-robin")
+        {
+            <RoundRobin />
         }
         else
     {
