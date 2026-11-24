@@ -1,4 +1,4 @@
-namespace AlgoLab.Labs.Lab4.Sorting;
+namespace AlgoLab.Labs.Lab4.Part1_InternalSorting;
 
 /// <summary>
 /// Вид события, попавшего в лог сортировки.

@@ -1,4 +1,4 @@
-namespace AlgoLab.Labs.Lab4.External;
+namespace AlgoLab.Labs.Lab4.Part2_ExternalSorting;
 
 /// <summary>
 /// Готовые файлы с таблицами для демонстрации внешней сортировки.

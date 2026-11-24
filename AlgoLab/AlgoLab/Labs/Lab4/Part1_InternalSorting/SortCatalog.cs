@@ -1,6 +1,6 @@
 using AlgoLab.Models;
 
-namespace AlgoLab.Labs.Lab4.Sorting;
+namespace AlgoLab.Labs.Lab4.Part1_InternalSorting;
 
 /// <summary>
 /// Описание одной демонстрации сортировки: всё, что нужно и для карточки в каталоге,
@@ -153,7 +153,7 @@ public static class SortCatalog
             Description = "Два указателя идут навстречу, меняя местами «неправильные» пары вокруг опорного",
             Complexity = "O(n log n)",
             ComplexityType = ComplexityType.Linearithmic,
-            Memory = "O(log n) — стек рекурсии",
+            Memory = "O(log n) при сбалансированном делении, O(n) в худшем случае — стек рекурсии",
             Stability = "Неустойчивая",
             IsStable = false,
             BestCase = "O(n log n) — опорный делит массив примерно пополам",
@@ -191,9 +191,9 @@ public static class SortCatalog
             Memory = "O(1) — сортировка на месте",
             Stability = "Неустойчивая",
             IsStable = false,
-            BestCase = "O(n log n)",
+            BestCase = "Θ(n) — например, когда все элементы равны",
             AverageCase = "O(n log n)",
-            WorstCase = "O(n log n) — гарантия одинакова для любых данных",
+            WorstCase = "O(n log n)",
             Category = AdvancedGroup,
             Formula = "куча + просеивание",
             Idea = "Массив можно представить как пирамиду: у элемента на позиции i дети лежат "
@@ -208,8 +208,8 @@ public static class SortCatalog
                 "После построения в корне (позиция 0) оказывается максимум всего массива.",
                 "Этап 2: меняем корень с последним элементом кучи — максимум встаёт на окончательное место.",
                 "Уменьшаем размер кучи на единицу и снова просеиваем новый корень вниз.",
-                "Повторяем, пока куча не опустеет. Гарантия O(n log n) не зависит от исходных данных, "
-                + "но сортировка неустойчива."
+                "Повторяем, пока куча не опустеет. Даже в худшем случае время ограничено O(n log n). "
+                + "Сортировка неустойчива."
             ],
             Run = HeapSortAlgorithm.Run,
             FastSort = HeapSortAlgorithm.Sort

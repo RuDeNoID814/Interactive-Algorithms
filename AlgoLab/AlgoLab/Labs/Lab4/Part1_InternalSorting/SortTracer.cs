@@ -1,4 +1,4 @@
-namespace AlgoLab.Labs.Lab4.Sorting;
+namespace AlgoLab.Labs.Lab4.Part1_InternalSorting;
 
 /// <summary>
 /// «Приборная панель» сортировки: алгоритм работает с массивом только через методы

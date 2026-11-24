@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace AlgoLab.Labs.Lab4.Words;
+namespace AlgoLab.Labs.Lab4.Part3_WordSorting;
 
 /// <summary>
 /// Источник текста для задания 3: готовый осмысленный пример и генератор

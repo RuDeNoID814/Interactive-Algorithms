@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace AlgoLab.Labs.Lab4.Words;
+namespace AlgoLab.Labs.Lab4.Part3_WordSorting;
 
 /// <summary>
 /// Один замер выбранного алгоритма на конкретном тексте: время, счётчики,

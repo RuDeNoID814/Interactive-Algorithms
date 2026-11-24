@@ -1,4 +1,4 @@
-@using AlgoLab.Labs.Lab4.Sorting
+@using AlgoLab.Labs.Lab4.Part1_InternalSorting
 @implements IDisposable
 @inject IJSRuntime JS
 
@@ -104,15 +104,30 @@
 
     <div class="sort-stage">
 
+        @if (Current.HeldIndex >= 0)
+        {
+            <div class="sort-held-key">
+                Ключ для вставки: <strong>@Current.HeldValue</strong>
+            </div>
+        }
+
         <div class="sort-bars">
             @for (int i = 0; i < Current.Values.Length; i++)
             {
                 int index = i;
                 <div class="sort-bar-cell">
-                    <div class="sort-bar @BarClass(index)" style="height:@BarHeight(index)%"
-                         title="Позиция @index, значение @Current.Values[index]">
-                    </div>
-                    <span class="sort-bar-value">@Current.Values[index]</span>
+                    @if (index == Current.HeldIndex)
+                    {
+                        <div class="sort-bar-slot" title="Позиция @index свободна"></div>
+                        <span class="sort-bar-value">·</span>
+                    }
+                    else
+                    {
+                        <div class="sort-bar @BarClass(index)" style="height:@BarHeight(index)%"
+                             title="Позиция @index, значение @Current.Values[index]">
+                        </div>
+                        <span class="sort-bar-value">@Current.Values[index]</span>
+                    }
                 </div>
             }
         </div>
@@ -449,8 +464,9 @@
     private string BarHeight(int index)
     {
         int max = 1;
-        foreach (int value in Current.Values)
-            if (value > max) max = value;
+        for (int i = 0; i < Current.Values.Length; i++)
+            if (i != Current.HeldIndex && Current.Values[i] > max) max = Current.Values[i];
+        if (Current.HeldIndex >= 0) max = Math.Max(max, Current.HeldValue);
 
         double percent = 100.0 * Current.Values[index] / max;
         return Math.Max(percent, 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
@@ -466,7 +482,6 @@
         else if (!Current.InRange(index)) classes.Add("sort-bar-dim");
 
         if (Current.PivotIndex == index) classes.Add("sort-bar-pivot");
-        if (Current.HeldIndex == index) classes.Add("sort-bar-held");
 
         // Подсветка текущего действия — самая заметная.
         if (Current.IsHighlighted(index))

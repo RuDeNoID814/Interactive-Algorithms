@@ -1,4 +1,4 @@
-namespace AlgoLab.Labs.Lab4.Words;
+namespace AlgoLab.Labs.Lab4.Part3_WordSorting;
 
 /// <summary>
 /// Результат одного запуска сортировки слов: сам отсортированный массив

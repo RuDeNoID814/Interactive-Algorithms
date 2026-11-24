@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace AlgoLab.Labs.Lab4.External;
+namespace AlgoLab.Labs.Lab4.Part2_ExternalSorting;
 
 /// <summary>
 /// Вид ключа: от него зависит, как программа сравнивает значения поля.

@@ -1,4 +1,4 @@
-namespace AlgoLab.Labs.Lab4.Words;
+namespace AlgoLab.Labs.Lab4.Part3_WordSorting;
 
 /// <summary>
 /// Одно слово и сколько раз оно встретилось в тексте.
