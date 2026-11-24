@@ -1,0 +1,475 @@
+/* =========================================
+   ВНЕШНЯЯ СОРТИРОВКА СЛИЯНИЕМ — ПОШАГОВАЯ ДЕМОНСТРАЦИЯ
+   ========================================= */
+
+.ext-sort {
+    margin-top: 1.5rem;
+}
+
+/* ---------- Настройки ---------- */
+
+.ext-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.ext-control label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.35rem;
+}
+
+.ext-control label strong {
+    color: var(--ink);
+}
+
+.ext-hint {
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    line-height: 1.35;
+}
+
+.ext-control-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.ext-summary-line {
+    margin-top: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    border-left: 3px solid var(--accent);
+    background: var(--surface-hover);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+}
+
+/* ---------- Управление показом ---------- */
+
+.ext-playback {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* ---------- Прогресс и счётчики ---------- */
+
+.ext-progress-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    font-size: 0.92rem;
+}
+
+.ext-progress-text {
+    color: var(--ink-soft);
+}
+
+.ext-counters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ext-counter {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    border: 1px solid transparent;
+}
+
+.ext-counter-compare {
+    background: #eaf1ff;
+    border-color: #c7dbff;
+    color: #1d4ed8;
+}
+
+.ext-counter-read {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+
+.ext-counter-write {
+    background: #fff1e8;
+    border-color: #ffd9c2;
+    color: #c2410c;
+}
+
+.ext-counter-run {
+    background: #f0ecff;
+    border-color: #ddd4ff;
+    color: #6d28d9;
+}
+
+.ext-counter-pass {
+    background: #f1f5f9;
+    border-color: #dbe3ec;
+    color: #475569;
+}
+
+.ext-progress-bar {
+    height: 8px;
+    margin-top: 0.5rem;
+}
+
+/* ---------- Схема файлов ---------- */
+
+.ext-stage {
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.ext-stage-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-faint);
+    margin-bottom: 0.75rem;
+}
+
+.ext-files {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 0.85rem;
+}
+
+.ext-file {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.7rem;
+    background: var(--surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ext-file-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.ext-file-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.ext-file-name {
+    font-weight: 700;
+    font-size: 0.86rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.ext-file-role {
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    white-space: nowrap;
+}
+
+.ext-file-meta {
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+}
+
+.ext-file-empty {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    font-style: italic;
+}
+
+.ext-records {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-top: 0.5rem;
+}
+
+.ext-record {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 5px;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    font-size: 0.76rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ext-record-key {
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.ext-record-label {
+    color: var(--ink-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ext-record-active {
+    background: #eaf1ff;
+    border-color: #93b4ff;
+}
+
+.ext-record-consumed {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.ext-file-hidden {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+}
+
+/* ---------- Легенда ---------- */
+
+.ext-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+}
+
+.ext-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ext-chip {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.ext-chip-active {
+    background: #eaf1ff;
+    border-color: #93b4ff;
+}
+
+.ext-chip-consumed {
+    background: #f8fafc;
+    border-color: var(--border);
+    opacity: 0.5;
+}
+
+.ext-chip-new {
+    background: #f8fafc;
+    border-color: var(--border);
+}
+
+/* ---------- Пояснение текущего шага ---------- */
+
+.ext-explanation {
+    margin-top: 1rem;
+    padding: 0.85rem 1.1rem;
+    border-left: 4px solid var(--accent);
+    background: var(--surface-hover);
+    border-radius: 0 10px 10px 0;
+}
+
+.ext-explanation-compare {
+    border-left-color: #2563eb;
+}
+
+.ext-explanation-read {
+    border-left-color: #16a34a;
+}
+
+.ext-explanation-write {
+    border-left-color: #ea580c;
+}
+
+.ext-explanation-createrun,
+.ext-explanation-merge {
+    border-left-color: #7c3aed;
+}
+
+.ext-explanation-phase {
+    border-left-color: #db2777;
+}
+
+.ext-explanation-done {
+    border-left-color: #16a34a;
+}
+
+.ext-explanation-kind {
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-faint);
+    margin-bottom: 0.25rem;
+}
+
+.ext-explanation-text {
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+/* ---------- Таблица результата ---------- */
+
+.ext-result-table {
+    max-height: 420px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.ext-result-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+}
+
+.ext-result-key {
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Лог шагов ---------- */
+
+.ext-log {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.ext-log-row {
+    display: grid;
+    grid-template-columns: 52px 82px 1fr auto;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.ext-log-row:last-child {
+    border-bottom: none;
+}
+
+.ext-log-row:hover {
+    background: var(--surface-hover);
+}
+
+.ext-log-row-current {
+    background: #eef4ff;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.ext-log-num {
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+}
+
+.ext-log-kind {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ext-log-kind-compare {
+    background: #eaf1ff;
+    color: #1d4ed8;
+}
+
+.ext-log-kind-read {
+    background: #ecfdf5;
+    color: #15803d;
+}
+
+.ext-log-kind-write {
+    background: #fff1e8;
+    color: #c2410c;
+}
+
+.ext-log-kind-createrun,
+.ext-log-kind-merge {
+    background: #f0ecff;
+    color: #6d28d9;
+}
+
+.ext-log-kind-phase {
+    background: #fdf2f8;
+    color: #be185d;
+}
+
+.ext-log-kind-done {
+    background: #ecfdf5;
+    color: #15803d;
+}
+
+.ext-log-kind-note {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ext-log-message {
+    color: var(--ink);
+    line-height: 1.4;
+}
+
+.ext-log-counters {
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ---------- Адаптивность ---------- */
+
+@media (max-width: 640px) {
+    .ext-log-row {
+        grid-template-columns: 40px 1fr;
+        row-gap: 0.2rem;
+    }
+
+    .ext-log-counters {
+        grid-column: 2;
+        justify-self: end;
+    }
+
+    .ext-files {
+        grid-template-columns: 1fr;
+    }
+}

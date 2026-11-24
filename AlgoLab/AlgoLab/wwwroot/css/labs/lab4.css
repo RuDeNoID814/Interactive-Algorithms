@@ -1,0 +1,112 @@
+/* =========================================
+   ЛАБОРАТОРНАЯ РАБОТА №4 — СОРТИРОВКИ
+   ========================================= */
+
+/* ---------- Текст теории ---------- */
+
+.sort-theory-text {
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.sort-walkthrough {
+    color: var(--ink-soft);
+    line-height: 1.55;
+    padding-left: 1.4rem;
+}
+
+.sort-walkthrough li {
+    margin-bottom: 0.45rem;
+}
+
+.sort-walkthrough li::marker {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* ---------- Карточка характеристик ---------- */
+
+.sort-facts-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.sort-facts-card .card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+}
+
+.sort-facts-table th {
+    width: 45%;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+}
+
+.sort-facts-table td {
+    font-size: 0.85rem;
+    color: var(--ink);
+}
+
+.sort-facts-table tbody tr:last-child th,
+.sort-facts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ---------- Бейджи устойчивости ---------- */
+
+.sort-badge,
+.sort-stability-badge {
+    display: inline-block;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sort-badge-yes,
+.sort-stability-yes {
+    background: #ecfdf5;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.sort-badge-no,
+.sort-stability-no {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+/* ---------- Сводная таблица ---------- */
+
+.sort-summary-table {
+    font-size: 0.87rem;
+}
+
+.sort-summary-table thead th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+}
+
+.sort-summary-table td {
+    color: var(--ink-soft);
+}
+
+.sort-summary-table td:first-child a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sort-summary-table td:first-child a:hover {
+    text-decoration: underline;
+}

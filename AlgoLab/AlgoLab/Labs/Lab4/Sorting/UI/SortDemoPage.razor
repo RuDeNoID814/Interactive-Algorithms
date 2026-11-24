@@ -1,0 +1,120 @@
+@page "/lab4/sort/{Slug}"
+@using AlgoLab.Labs.Lab4.Sorting
+@using AlgoLab.Labs.Lab4.Sorting.UI
+
+@if (Demo is null)
+{
+    <h3>Демонстрация не найдена</h3>
+    <a href="/lab4">← Все сортировки</a>
+}
+else
+{
+    <div class="algo-page-header">
+        <a href="/lab4" class="back-link">← Сортировки</a>
+        <span class="algo-page-complexity">@Demo.Complexity</span>
+        <h2>@Demo.Name</h2>
+        <p class="algo-page-desc">@Demo.Description</p>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- КРАТКАЯ ТЕОРИЯ                            -->
+    <!-- ========================================= -->
+
+    <div class="row mb-4">
+        <div class="col-lg-7 mb-3">
+            <h4>Как это работает</h4>
+            <p class="sort-theory-text">@Demo.Idea</p>
+
+            <h5 class="mt-4">Порядок действий</h5>
+            <ol class="sort-walkthrough">
+                @foreach (var line in Demo.Walkthrough)
+                {
+                    <li>@line</li>
+                }
+            </ol>
+        </div>
+
+        <div class="col-lg-5 mb-3">
+            <div class="card sort-facts-card">
+                <div class="card-body">
+                    <h5 class="card-title">Характеристики</h5>
+
+                    <table class="table table-sm sort-facts-table mb-0">
+                        <tbody>
+                            <tr>
+                                <th>Лучший случай</th>
+                                <td>@Demo.BestCase</td>
+                            </tr>
+                            <tr>
+                                <th>Средний случай</th>
+                                <td>@Demo.AverageCase</td>
+                            </tr>
+                            <tr>
+                                <th>Худший случай</th>
+                                <td>@Demo.WorstCase</td>
+                            </tr>
+                            <tr>
+                                <th>Память</th>
+                                <td>@Demo.Memory</td>
+                            </tr>
+                            <tr>
+                                <th>Устойчивость</th>
+                                <td>
+                                    <span class="sort-badge @(Demo.IsStable ? "sort-badge-yes" : "sort-badge-no")">
+                                        @Demo.Stability
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Группа</th>
+                                <td>@Demo.Category</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <strong>Устойчивость</strong> — свойство сохранять взаимный порядок равных элементов.
+                Если в массиве две одинаковые пятёрки, устойчивая сортировка оставит их в том же
+                порядке, а неустойчивая может поменять местами.
+            </div>
+        </div>
+    </div>
+
+    <hr />
+
+    <h3>Пошаговая демонстрация</h3>
+    <p class="text-muted">
+        Настройте размер массива и задержку, затем нажмите «Показать сортировку».
+        Любую строку лога можно выбрать, чтобы перейти к нужному шагу.
+    </p>
+
+    <SortDemo Demo="Demo" />
+
+    <hr class="mt-5" />
+
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var other in OtherDemos)
+        {
+            <a class="btn btn-outline-secondary btn-sm" href="@($"/lab4/sort/{other.Slug}")">
+                @other.Name
+            </a>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Идентификатор алгоритма из адреса страницы.</summary>
+    [Parameter]
+    public string Slug { get; set; } = "";
+
+    private SortDemoInfo? Demo { get; set; }
+
+    /// <summary>Остальные сортировки для быстрого перехода.</summary>
+    private IEnumerable<SortDemoInfo> OtherDemos =>
+        SortCatalog.All.Where(item => item.Slug != Slug);
+
+    protected override void OnParametersSet() =>
+        Demo = SortCatalog.Find(Slug);
+}

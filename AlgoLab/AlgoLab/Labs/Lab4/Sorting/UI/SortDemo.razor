@@ -1,0 +1,511 @@
+@using AlgoLab.Labs.Lab4.Sorting
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div class="sort-demo">
+
+    <!-- ========================================= -->
+    <!-- НАСТРОЙКИ                                 -->
+    <!-- ========================================= -->
+
+    <div class="sort-controls">
+
+        <div class="sort-control">
+            <label>Размер массива: <strong>@ArraySize</strong></label>
+            <input type="range" min="5" max="30" class="form-range"
+                   value="@ArraySize" @oninput="OnArraySizeChanged"
+                   disabled="@IsPlaying" />
+        </div>
+
+        <div class="sort-control">
+            <label>Задержка между шагами: <strong>@DelayMs мс</strong></label>
+            <input type="range" min="20" max="900" step="20" class="form-range"
+                   value="@DelayMs" @oninput="OnDelayChanged" />
+            <div class="sort-delay-hint">Меньше задержка — быстрее показ. 900 мс удобно для разбора.</div>
+        </div>
+
+        <div class="sort-control">
+            <label>Набор данных</label>
+            <select class="form-select" value="@Preset" @onchange="OnPresetChanged" disabled="@IsPlaying">
+                <option value="random">Случайные числа</option>
+                <option value="nearly">Почти отсортированные</option>
+                <option value="reversed">Обратный порядок</option>
+                <option value="few">Мало различных значений</option>
+            </select>
+        </div>
+
+        <div class="sort-control sort-control-buttons">
+            <label>&nbsp;</label>
+            <button class="btn btn-outline-secondary" @onclick="GenerateNewArray" disabled="@IsPlaying">
+                Новый массив
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ========================================= -->
+    <!-- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ               -->
+    <!-- ========================================= -->
+
+    <div class="sort-playback">
+        <button class="btn btn-primary me-2" @onclick="PlayAsync" disabled="@(IsPlaying || IsFinished)">
+            @(IsPlaying ? "Идёт показ…" : "▶ Показать сортировку")
+        </button>
+        <button class="btn btn-warning me-2" @onclick="Pause" disabled="@(!IsPlaying)">
+            ❚❚ Пауза
+        </button>
+        <button class="btn btn-outline-primary me-2" @onclick="StepBack" disabled="@(IsPlaying || _stepIndex == 0)">
+            ← Шаг назад
+        </button>
+        <button class="btn btn-outline-primary me-2" @onclick="StepForward" disabled="@(IsPlaying || IsFinished)">
+            Шаг вперёд →
+        </button>
+        <button class="btn btn-outline-danger" @onclick="Reset" disabled="@IsPlaying">
+            ⟲ Сначала
+        </button>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ПОЛОСА ПРОГРЕССА И СЧЁТЧИКИ               -->
+    <!-- ========================================= -->
+
+    <div class="sort-progress-row">
+        <div class="sort-progress-text">
+            Шаг <strong>@(_stepIndex + 1)</strong> из <strong>@Steps.Count</strong>
+        </div>
+        <div class="sort-counters">
+            <span class="sort-counter sort-counter-compare">
+                Сравнений: <strong>@Current.Comparisons</strong>
+            </span>
+            <span class="sort-counter sort-counter-swap">
+                Обменов: <strong>@Current.Swaps</strong>
+            </span>
+            <span class="sort-counter sort-counter-shift">
+                Сдвигов: <strong>@Current.Shifts</strong>
+            </span>
+        </div>
+    </div>
+
+    <div class="progress sort-progress-bar">
+        <div class="progress-bar" style="@ProgressStyle"></div>
+    </div>
+
+    @if (_tracer is not null && _tracer.Truncated)
+    {
+        <div class="alert alert-warning mt-3 mb-0">
+            Лог шагов ограничен первыми @MaxStepsShown шагами: массив слишком большой.
+            Уменьшите размер массива, чтобы увидеть все шаги.
+        </div>
+    }
+
+    <!-- ========================================= -->
+    <!-- ВИЗУАЛИЗАЦИЯ МАССИВА                      -->
+    <!-- ========================================= -->
+
+    <div class="sort-stage">
+
+        <div class="sort-bars">
+            @for (int i = 0; i < Current.Values.Length; i++)
+            {
+                int index = i;
+                <div class="sort-bar-cell">
+                    <div class="sort-bar @BarClass(index)" style="height:@BarHeight(index)%"
+                         title="Позиция @index, значение @Current.Values[index]">
+                    </div>
+                    <span class="sort-bar-value">@Current.Values[index]</span>
+                </div>
+            }
+        </div>
+
+        <div class="sort-legend">
+            <span class="sort-legend-item"><i class="sort-chip sort-chip-compare"></i> сравниваем</span>
+            <span class="sort-legend-item"><i class="sort-chip sort-chip-swap"></i> меняем местами</span>
+            <span class="sort-legend-item"><i class="sort-chip sort-chip-pivot"></i> опорный / ключ</span>
+            <span class="sort-legend-item"><i class="sort-chip sort-chip-sorted"></i> на своём месте</span>
+            <span class="sort-legend-item"><i class="sort-chip sort-chip-range"></i> активный участок</span>
+        </div>
+
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ПОЯСНЕНИЕ ТЕКУЩЕГО ШАГА                   -->
+    <!-- ========================================= -->
+
+    <div class="sort-explanation sort-explanation-@Current.Kind.ToString().ToLowerInvariant()">
+        <div class="sort-explanation-kind">@KindTitle(Current.Kind)</div>
+        <div class="sort-explanation-text">@Current.Message</div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ЛОГ ШАГОВ                                 -->
+    <!-- ========================================= -->
+
+    <h5 class="mt-4">Лог сравнений и перемещений</h5>
+    <p class="text-muted small">
+        Каждая строка — одно действие алгоритма. Числа справа показывают, сколько сравнений,
+        обменов и сдвигов накопилось к этому шагу.
+    </p>
+
+    <div class="sort-log" @ref="_logContainer">
+        @for (int i = 0; i < Steps.Count; i++)
+        {
+            int index = i;
+            var step = Steps[index];
+            <div class="sort-log-row @(index == _stepIndex ? "sort-log-row-current" : "")"
+                 data-current="@(index == _stepIndex ? "true" : "false")"
+                 @onclick="() => GoToStep(index)">
+                <span class="sort-log-num">@(index + 1)</span>
+                <span class="sort-log-kind sort-log-kind-@step.Kind.ToString().ToLowerInvariant()">
+                    @KindShort(step.Kind)
+                </span>
+                <span class="sort-log-message">@step.Message</span>
+                <span class="sort-log-counters">
+                    ср @step.Comparisons · обм @step.Swaps · сдв @step.Shifts
+                </span>
+            </div>
+        }
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ИТОГИ                                     -->
+    <!-- ========================================= -->
+
+    @if (IsFinished)
+    {
+        <div class="alert alert-success mt-4">
+            <strong>Сортировка завершена.</strong><br />
+            Всего шагов: <strong>@Steps.Count</strong><br />
+            Сравнений: <strong>@Current.Comparisons</strong><br />
+            Обменов: <strong>@Current.Swaps</strong><br />
+            Сдвигов: <strong>@Current.Shifts</strong><br />
+            Всего перемещений (обмены + сдвиги): <strong>@(Current.Swaps + Current.Shifts)</strong>
+        </div>
+    }
+
+</div>
+
+@code {
+    /// <summary>Сколько шагов максимум хранит трассировщик.</summary>
+    private const int MaxStepsShown = 20000;
+
+    /// <summary>Описываемый алгоритм.</summary>
+    [Parameter]
+    public SortDemoInfo Demo { get; set; } = null!;
+
+    private SortTracer? _tracer;
+    private int[] _initial = Array.Empty<int>();
+
+    private int _stepIndex;
+    private int _arraySize = 12;
+    private int _delayMs = 350;
+    private string _preset = "random";
+
+    private bool _isPlaying;
+    private CancellationTokenSource? _cts;
+
+    private ElementReference _logContainer;
+
+    /// <summary>Алгоритм, для которого построен текущий прогон.</summary>
+    private SortDemoInfo? _builtFor;
+
+    /// <summary>Размер массива.</summary>
+    private int ArraySize => _arraySize;
+
+    /// <summary>Задержка между шагами в миллисекундах.</summary>
+    private int DelayMs => _delayMs;
+
+    /// <summary>Выбранный набор данных.</summary>
+    private string Preset => _preset;
+
+    /// <summary>Идёт ли автоматический показ.</summary>
+    private bool IsPlaying => _isPlaying;
+
+    /// <summary>Лог шагов текущего прогона.</summary>
+    private IReadOnlyList<SortStep> Steps => _tracer?.Steps ?? Array.Empty<SortStep>();
+
+    /// <summary>Показ дошёл до последнего шага.</summary>
+    private bool IsFinished => Steps.Count > 0 && _stepIndex >= Steps.Count - 1;
+
+    /// <summary>Текущий шаг. Если шагов ещё нет, возвращается пустая заготовка.</summary>
+    private SortStep Current =>
+        Steps.Count > 0 ? Steps[Math.Clamp(_stepIndex, 0, Steps.Count - 1)] : new SortStep();
+
+    /// <summary>Ширина полосы прогресса.</summary>
+    private string ProgressStyle =>
+        Steps.Count <= 1
+            ? "width:0%"
+            : "width:" + (100.0 * _stepIndex / (Steps.Count - 1))
+                .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    protected override void OnInitialized() => BuildRun();
+
+    protected override void OnParametersSet()
+    {
+        // Пересобираем прогон только при переходе на другой алгоритм,
+        // чтобы обычное обновление страницы не сбрасывало текущий показ.
+        if (!ReferenceEquals(_builtFor, Demo))
+            BuildRun();
+    }
+
+    public void Dispose() => _cts?.Cancel();
+
+    // =========================================
+    // ПОСТРОЕНИЕ ПРОГОНА
+    // =========================================
+
+    /// <summary>
+    /// Генерирует массив и один раз прогоняет алгоритм с трассировкой.
+    /// Все шаги сохраняются заранее, поэтому «шаг назад» работает мгновенно.
+    /// </summary>
+    private void BuildRun()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+
+        _initial = GenerateArray(_arraySize, _preset);
+
+        _tracer = new SortTracer(_initial);
+        Demo?.Run(_tracer);
+
+        _builtFor = Demo;
+        _stepIndex = 0;
+    }
+
+    /// <summary>Создаёт набор данных выбранного вида.</summary>
+    private static int[] GenerateArray(int size, string preset)
+    {
+        var random = new Random();
+        var data = new int[size];
+
+        switch (preset)
+        {
+            case "reversed":
+                // Строго по убыванию — худший случай для многих алгоритмов.
+                for (int i = 0; i < size; i++)
+                    data[i] = 99 - i * (90 / Math.Max(size, 1));
+
+                for (int i = 0; i < size; i++) data[i] = Math.Max(data[i], 5);
+                break;
+
+            case "nearly":
+                // Почти отсортированный массив: пара случайных перестановок.
+                for (int i = 0; i < size; i++)
+                    data[i] = (i + 1) * 90 / size + 5;
+
+                for (int k = 0; k < Math.Max(1, size / 6); k++)
+                {
+                    int a = random.Next(size);
+                    int b = random.Next(size);
+                    (data[a], data[b]) = (data[b], data[a]);
+                }
+                break;
+
+            case "few":
+                // Мало различных значений — удобно обсуждать устойчивость.
+                int[] palette = { 20, 45, 70, 95 };
+                for (int i = 0; i < size; i++)
+                    data[i] = palette[random.Next(palette.Length)];
+                break;
+
+            default:
+                for (int i = 0; i < size; i++)
+                    data[i] = random.Next(5, 100);
+                break;
+        }
+
+        return data;
+    }
+
+    // =========================================
+    // УПРАВЛЕНИЕ
+    // =========================================
+
+    private void OnArraySizeChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out int value)) return;
+
+        _arraySize = Math.Clamp(value, 5, 30);
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void OnDelayChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+            _delayMs = Math.Clamp(value, 20, 900);
+    }
+
+    private void OnPresetChanged(ChangeEventArgs e)
+    {
+        _preset = e.Value?.ToString() ?? "random";
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void GenerateNewArray()
+    {
+        BuildRun();
+        StateHasChanged();
+    }
+
+    /// <summary>Запускает автоматический показ шаг за шагом.</summary>
+    private async Task PlayAsync()
+    {
+        if (Steps.Count == 0) return;
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        // Повторный запуск после завершения — начинаем с начала.
+        if (IsFinished) _stepIndex = 0;
+
+        _isPlaying = true;
+
+        try
+        {
+            while (_stepIndex < Steps.Count - 1)
+            {
+                await Task.Delay(_delayMs, token);
+                _stepIndex++;
+
+                await InvokeAsync(StateHasChanged);
+                await ScrollLogAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Пауза или остановка — это нормальный сценарий, ничего не делаем.
+        }
+        finally
+        {
+            _isPlaying = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void Pause()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+    }
+
+    private void Reset()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+        _stepIndex = 0;
+        StateHasChanged();
+    }
+
+    private void StepForward()
+    {
+        if (IsFinished) return;
+        _stepIndex++;
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    private void StepBack()
+    {
+        if (_stepIndex == 0) return;
+        _stepIndex--;
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    /// <summary>Переход к произвольному шагу по клику в логе.</summary>
+    private void GoToStep(int index)
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+        _stepIndex = Math.Clamp(index, 0, Math.Max(Steps.Count - 1, 0));
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    /// <summary>Прокручивает лог к текущей строке.</summary>
+    private async Task ScrollLogAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("algoLabSortDemo.scrollCurrent", _logContainer);
+        }
+        catch (JSException)
+        {
+            // Прокрутка — вспомогательная функция: если JS недоступен, показ продолжается.
+        }
+        catch (InvalidOperationException)
+        {
+            // Компонент уже отрисован заново — прокрутка не нужна.
+        }
+    }
+
+    // =========================================
+    // ОФОРМЛЕНИЕ
+    // =========================================
+
+    /// <summary>Высота столбца в процентах от максимального значения.</summary>
+    private string BarHeight(int index)
+    {
+        int max = 1;
+        foreach (int value in Current.Values)
+            if (value > max) max = value;
+
+        double percent = 100.0 * Current.Values[index] / max;
+        return Math.Max(percent, 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>CSS-класс столбца: подсветка сравнения, обмена, опорного и готовых элементов.</summary>
+    private string BarClass(int index)
+    {
+        var classes = new List<string>();
+
+        // Готовые элементы — самый спокойный цвет, его перебивают остальные подсветки.
+        if (Current.IsSorted(index)) classes.Add("sort-bar-sorted");
+        else if (!Current.InRange(index)) classes.Add("sort-bar-dim");
+
+        if (Current.PivotIndex == index) classes.Add("sort-bar-pivot");
+        if (Current.HeldIndex == index) classes.Add("sort-bar-held");
+
+        // Подсветка текущего действия — самая заметная.
+        if (Current.IsHighlighted(index))
+        {
+            classes.Add(Current.Kind switch
+            {
+                SortStepKind.Compare => "sort-bar-compare",
+                SortStepKind.Swap => "sort-bar-swap",
+                SortStepKind.Shift => "sort-bar-shift",
+                _ => "sort-bar-compare"
+            });
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    /// <summary>Заголовок пояснения по виду шага.</summary>
+    private static string KindTitle(SortStepKind kind) => kind switch
+    {
+        SortStepKind.Compare => "Сравнение",
+        SortStepKind.Swap => "Обмен местами",
+        SortStepKind.Shift => "Перемещение",
+        SortStepKind.Hold => "Берём элемент «в руку»",
+        SortStepKind.Pivot => "Выбор опорного элемента",
+        SortStepKind.Sorted => "Элемент на своём месте",
+        SortStepKind.Done => "Сортировка завершена",
+        _ => "Пояснение"
+    };
+
+    /// <summary>Короткая метка шага для строки лога.</summary>
+    private static string KindShort(SortStepKind kind) => kind switch
+    {
+        SortStepKind.Compare => "СРАВН",
+        SortStepKind.Swap => "ОБМЕН",
+        SortStepKind.Shift => "СДВИГ",
+        SortStepKind.Hold => "В РУКУ",
+        SortStepKind.Pivot => "ОПОРА",
+        SortStepKind.Sorted => "ГОТОВ",
+        SortStepKind.Done => "ФИНАЛ",
+        _ => "ЗАМЕТКА"
+    };
+}

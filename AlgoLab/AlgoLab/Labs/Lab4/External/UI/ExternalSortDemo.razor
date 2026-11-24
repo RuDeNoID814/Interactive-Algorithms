@@ -1,0 +1,590 @@
+@using AlgoLab.Labs.Lab4.External
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div class="ext-sort">
+
+    <!-- ========================================= -->
+    <!-- НАСТРОЙКИ                                 -->
+    <!-- ========================================= -->
+
+    <div class="ext-controls">
+
+        <div class="ext-control">
+            <label>Метод внешней сортировки</label>
+            <select class="form-select" value="@Method" @onchange="OnMethodChanged" disabled="@IsPlaying">
+                <option value="@ExternalSortMethod.Direct">Прямое слияние</option>
+                <option value="@ExternalSortMethod.Natural">Естественное слияние</option>
+                <option value="@ExternalSortMethod.Multiway">Многопутевое слияние</option>
+            </select>
+            <div class="ext-hint">@MethodHint</div>
+        </div>
+
+        <div class="ext-control">
+            <label>Ключевое поле</label>
+            <select class="form-select" value="@ColumnIndex" @onchange="OnColumnChanged" disabled="@IsPlaying">
+                @foreach (var column in Columns)
+                {
+                    <option value="@column.Index">@column.Name (@column.KindLabel)</option>
+                }
+            </select>
+            <div class="ext-hint">Поле, по которому упорядочиваются записи.</div>
+        </div>
+
+        <div class="ext-control">
+            <label>Направление</label>
+            <select class="form-select" value="@Descending" @onchange="OnDirectionChanged" disabled="@IsPlaying">
+                <option value="false">По возрастанию</option>
+                <option value="true">По убыванию</option>
+            </select>
+            <div class="ext-hint">Порядок, который должен получиться в файле-результате.</div>
+        </div>
+
+        <div class="ext-control">
+            <label>Записей в памяти: <strong>@MemorySize</strong></label>
+            <input type="range" min="2" max="10" class="form-range"
+                   value="@MemorySize" @oninput="OnMemoryChanged" disabled="@IsPlaying" />
+            <div class="ext-hint">Сколько записей помещается в память: таков размер отрезка.</div>
+        </div>
+
+        @if (Method == ExternalSortMethod.Multiway)
+        {
+            <div class="ext-control">
+                <label>Путей слияния: <strong>@Ways</strong></label>
+                <input type="range" min="2" max="4" class="form-range"
+                       value="@Ways" @oninput="OnWaysChanged" disabled="@IsPlaying" />
+                <div class="ext-hint">Сколько файлов сливается за один проход.</div>
+            </div>
+        }
+
+        <div class="ext-control ext-control-buttons">
+            <label>&nbsp;</label>
+            <button class="btn btn-outline-secondary" @onclick="Rebuild" disabled="@IsPlaying">
+                Заново прочитать файл
+            </button>
+        </div>
+
+    </div>
+
+    <div class="ext-summary-line">
+        В файле <strong>@TotalRecords</strong> записей, полей — <strong>@ColumnCount</strong>.
+        Сортируем по полю «<strong>@ColumnName</strong>» (@ColumnKindLabel), @DirectionLabel.
+    </div>
+
+    <!-- ========================================= -->
+    <!-- УПРАВЛЕНИЕ ПОКАЗОМ                        -->
+    <!-- ========================================= -->
+
+    <div class="ext-playback">
+        <button class="btn btn-primary me-2" @onclick="PlayAsync" disabled="@(IsPlaying || IsFinished)">
+            @(IsPlaying ? "Идёт показ…" : "▶ Показать сортировку")
+        </button>
+        <button class="btn btn-warning me-2" @onclick="Pause" disabled="@(!IsPlaying)">
+            ❚❚ Пауза
+        </button>
+        <button class="btn btn-outline-primary me-2" @onclick="StepBack" disabled="@(IsPlaying || _stepIndex == 0)">
+            ← Шаг назад
+        </button>
+        <button class="btn btn-outline-primary me-2" @onclick="StepForward" disabled="@(IsPlaying || IsFinished)">
+            Шаг вперёд →
+        </button>
+        <button class="btn btn-outline-danger" @onclick="Reset" disabled="@IsPlaying">
+            ⟲ Сначала
+        </button>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ПРОГРЕСС И СЧЁТЧИКИ                       -->
+    <!-- ========================================= -->
+
+    <div class="ext-progress-row">
+        <div class="ext-progress-text">
+            Шаг <strong>@(_stepIndex + 1)</strong> из <strong>@Steps.Count</strong>
+        </div>
+        <div class="ext-counters">
+            <span class="ext-counter ext-counter-compare">Сравнений: <strong>@Current.Comparisons</strong></span>
+            <span class="ext-counter ext-counter-read">Прочитано: <strong>@Current.RecordsRead</strong></span>
+            <span class="ext-counter ext-counter-write">Записано: <strong>@Current.RecordsWritten</strong></span>
+            <span class="ext-counter ext-counter-run">Отрезков: <strong>@Current.RunsCreated</strong></span>
+            <span class="ext-counter ext-counter-pass">Проходов: <strong>@Current.Passes</strong></span>
+        </div>
+    </div>
+
+    <div class="progress ext-progress-bar">
+        <div class="progress-bar" style="@ProgressStyle"></div>
+    </div>
+
+    @if (_tracer is not null && _tracer.Truncated)
+    {
+        <div class="alert alert-warning mt-3 mb-0">
+            Лог шагов ограничен первыми @ExternalSortTracer.MaxSteps шагами. Уменьшите размер таблицы,
+            чтобы увидеть все действия.
+        </div>
+    }
+
+    <!-- ========================================= -->
+    <!-- СХЕМА ФАЙЛОВ                              -->
+    <!-- ========================================= -->
+
+    <div class="ext-stage">
+        <div class="ext-stage-title">Файлы на диске</div>
+
+        @if (Current.Files.Count == 0)
+        {
+            <p class="text-muted mb-0">Пока ни одного файла: нажмите «Показать сортировку».</p>
+        }
+        else
+        {
+            <div class="ext-files">
+                @foreach (var file in Current.Files)
+                {
+                    <div class="ext-file @(file.Active ? "ext-file-active" : "")">
+                        <div class="ext-file-head">
+                            <span class="ext-file-name">@file.Name</span>
+                            <span class="ext-file-role">@file.Role</span>
+                        </div>
+
+                        <div class="ext-file-meta">
+                            записей: <strong>@file.TotalRecords</strong>
+                            @if (file.Remaining > 0)
+                            {
+                                <text> · не прочитано: <strong>@file.Remaining</strong></text>
+                            }
+                            @if (file.Completed)
+                            {
+                                <text> · прочитан до конца</text>
+                            }
+                        </div>
+
+                        @if (file.Records.Count == 0)
+                        {
+                            <div class="ext-file-empty">пока пусто</div>
+                        }
+                        else
+                        {
+                            <div class="ext-records">
+                                @foreach (var record in file.Records)
+                                {
+                                    <div class="ext-record @(record.Active ? "ext-record-active" : "") @(record.Consumed ? "ext-record-consumed" : "")"
+                                         title="Строка исходного файла @record.Number">
+                                        <span class="ext-record-key">@record.Key</span>
+                                        <span class="ext-record-label">@record.Label</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (file.Hidden > 0)
+                        {
+                            <div class="ext-file-hidden">…и ещё @file.Hidden</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="ext-legend">
+            <span class="ext-legend-item"><i class="ext-chip ext-chip-active"></i> участвует в действии</span>
+            <span class="ext-legend-item"><i class="ext-chip ext-chip-consumed"></i> уже прочитана из файла</span>
+            <span class="ext-legend-item"><i class="ext-chip ext-chip-new"></i> ещё лежит в файле</span>
+            <span class="ext-legend-item">вверху записи — ключ, ниже — остальные поля</span>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- ПОЯСНЕНИЕ ТЕКУЩЕГО ШАГА                   -->
+    <!-- ========================================= -->
+
+    <div class="ext-explanation ext-explanation-@Current.Kind.ToString().ToLowerInvariant()">
+        <div class="ext-explanation-kind">@KindTitle(Current.Kind)</div>
+        <div class="ext-explanation-text">@Current.Message</div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- РЕЗУЛЬТАТ                                 -->
+    <!-- ========================================= -->
+
+    @if (IsFinished)
+    {
+        <div class="alert alert-success mt-4">
+            <strong>Файл отсортирован.</strong>
+            Сравнений ключей: <strong>@Current.Comparisons</strong>,
+            прочитано записей: <strong>@Current.RecordsRead</strong>,
+            записано: <strong>@Current.RecordsWritten</strong>,
+            отрезков: <strong>@Current.RunsCreated</strong>,
+            проходов слияния: <strong>@Current.Passes</strong>.
+        </div>
+
+        <h5 class="mt-4">Результат в файле</h5>
+        <div class="table-responsive ext-result-table">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        @for (int i = 0; i < Headers.Length; i++)
+                        {
+                            <th class="@(i == ColumnIndex ? "ext-result-key" : "")">@Headers[i]</th>
+                        }
+                        <th>Строка входного файла</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var record in ResultRecords.Take(MaxResultRows))
+                    {
+                        <tr>
+                            @for (int i = 0; i < Headers.Length; i++)
+                            {
+                                <td class="@(i == ColumnIndex ? "ext-result-key" : "")">
+                                    @(i < record.Fields.Length ? record.Fields[i] : "")
+                                </td>
+                            }
+                            <td class="text-muted">@record.Number</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (ResultRecords.Count > MaxResultRows)
+        {
+            <p class="text-muted small mt-2">
+                Показаны первые @MaxResultRows записей из @ResultRecords.Count.
+                Полный результат можно скачать кнопкой ниже.
+            </p>
+        }
+
+        <div class="mt-3">
+            <button class="btn btn-outline-secondary" @onclick="DownloadResult">
+                ⤓ Скачать результат в файл
+            </button>
+        </div>
+    }
+
+    <!-- ========================================= -->
+    <!-- ЛОГ ШАГОВ                                 -->
+    <!-- ========================================= -->
+
+    <h5 class="mt-4">Лог сравнений и перемещений между файлами</h5>
+    <p class="text-muted small">
+        Каждая строка — одно действие внешней сортировки. Числа справа показывают, сколько
+        сравнений, чтений и записей накопилось к этому шагу. Нажмите на строку, чтобы вернуться к шагу.
+    </p>
+
+    <div class="ext-log" @ref="_logContainer">
+        @for (int i = 0; i < Steps.Count; i++)
+        {
+            int index = i;
+            var step = Steps[index];
+            <div class="ext-log-row @(index == _stepIndex ? "ext-log-row-current" : "")"
+                 data-current="@(index == _stepIndex ? "true" : "false")"
+                 @onclick="() => GoToStep(index)">
+                <span class="ext-log-num">@(index + 1)</span>
+                <span class="ext-log-kind ext-log-kind-@step.Kind.ToString().ToLowerInvariant()">
+                    @KindShort(step.Kind)
+                </span>
+                <span class="ext-log-message">@step.Message</span>
+                <span class="ext-log-counters">
+                    ср @step.Comparisons · чт @step.RecordsRead · зп @step.RecordsWritten
+                </span>
+            </div>
+        }
+    </div>
+
+</div>
+
+@code {
+    /// <summary>Сколько строк результата показывать в таблице.</summary>
+    private const int MaxResultRows = 200;
+
+    /// <summary>Таблица, прочитанная из файла.</summary>
+    [Parameter]
+    public ExternalSortTable Table { get; set; } = null!;
+
+    private ExternalSortTracer? _tracer;
+
+    private int _stepIndex;
+    private ExternalSortMethod _method = ExternalSortMethod.Direct;
+    private int _memorySize = 4;
+    private int _ways = 3;
+    private int _columnIndex;
+    private bool _descending;
+
+    private bool _isPlaying;
+    private CancellationTokenSource? _cts;
+    private ElementReference _logContainer;
+
+    /// <summary>Настройки, для которых построен текущий прогон.</summary>
+    private string _builtFor = "";
+
+    private ExternalSortMethod Method => _method;
+    private int MemorySize => _memorySize;
+    private int Ways => _ways;
+    private int ColumnIndex => _columnIndex;
+    private bool Descending => _descending;
+
+    private IReadOnlyList<ExternalSortColumn> Columns => Table.Columns;
+    private string[] Headers => Table.Headers;
+    private int TotalRecords => Table.Records.Count;
+    private int ColumnCount => Table.Headers.Length;
+    private string ColumnName => SelectedColumn.Name;
+    private string ColumnKindLabel => SelectedColumn.KindLabel;
+    private string DirectionLabel => SelectedColumn.DirectionLabel;
+
+    private ExternalSortColumn SelectedColumn =>
+        Table.Columns[Math.Clamp(_columnIndex, 0, Table.Columns.Count - 1)];
+
+    private string MethodHint => _method switch
+    {
+        ExternalSortMethod.Direct => "Файл режется на отрезки ровно по размеру памяти.",
+        ExternalSortMethod.Natural => "Отрезки — уже упорядоченные участки файла: если файл почти отсортирован, проходов меньше.",
+        _ => "За один проход сливается несколько файлов сразу, поэтому проходов нужно меньше."
+    };
+
+    private bool IsPlaying => _isPlaying;
+
+    private IReadOnlyList<ExternalSortStep> Steps => _tracer?.Steps ?? Array.Empty<ExternalSortStep>();
+
+    private bool IsFinished => Steps.Count > 0 && _stepIndex >= Steps.Count - 1;
+
+    private ExternalSortStep Current =>
+        Steps.Count > 0 ? Steps[Math.Clamp(_stepIndex, 0, Steps.Count - 1)] : new ExternalSortStep();
+
+    /// <summary>Записи файла-результата в порядке, в котором они записаны в файл.</summary>
+    private IReadOnlyList<ExternalSortRecord> ResultRecords =>
+        _tracer?.Result?.Records ?? Array.Empty<ExternalSortRecord>();
+
+    private string ProgressStyle =>
+        Steps.Count <= 1
+            ? "width:0%"
+            : "width:" + (100.0 * _stepIndex / (Steps.Count - 1))
+                .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    protected override void OnInitialized() => BuildRun();
+
+    protected override void OnParametersSet()
+    {
+        if (_builtFor.Length == 0) BuildRun();
+    }
+
+    public void Dispose() => _cts?.Cancel();
+
+    // =========================================
+    // ПОСТРОЕНИЕ ПРОГОНА
+    // =========================================
+
+    /// <summary>
+    /// Прогоняет внешнюю сортировку один раз и запоминает все шаги.
+    /// </summary>
+    /// <remarks>
+    /// Шаги сохраняются заранее, поэтому «шаг назад» работает мгновенно: ничего
+    /// не пересчитывается, просто показывается ранее сохранённый снимок файлов.
+    /// </remarks>
+    private void BuildRun()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+
+        var column = SelectedColumn.WithDirection(_descending);
+
+        _tracer = new ExternalSortTracer(Table, column);
+        ExternalSortAlgorithms.Run(_tracer, new ExternalSortSettings
+        {
+            Method = _method,
+            MemorySize = _memorySize,
+            Ways = _ways
+        });
+
+        _builtFor = BuildKey();
+        _stepIndex = 0;
+    }
+
+    /// <summary>Ключ настроек: по нему видно, нужно ли пересобирать прогон.</summary>
+    private string BuildKey() =>
+        $"{Table.GetHashCode()}|{_method}|{_memorySize}|{_ways}|{_columnIndex}|{_descending}";
+
+    // =========================================
+    // НАСТРОЙКИ
+    // =========================================
+
+    private void OnMethodChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<ExternalSortMethod>(e.Value?.ToString(), out var value)) _method = value;
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void OnColumnChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value)) _columnIndex = value;
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void OnDirectionChanged(ChangeEventArgs e)
+    {
+        _descending = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void OnMemoryChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value)) _memorySize = Math.Clamp(value, 2, 10);
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void OnWaysChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value)) _ways = Math.Clamp(value, 2, 4);
+        BuildRun();
+        StateHasChanged();
+    }
+
+    private void Rebuild()
+    {
+        BuildRun();
+        StateHasChanged();
+    }
+
+    // =========================================
+    // УПРАВЛЕНИЕ ПОКАЗОМ
+    // =========================================
+
+    private async Task PlayAsync()
+    {
+        if (Steps.Count == 0) return;
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        if (IsFinished) _stepIndex = 0;
+
+        _isPlaying = true;
+
+        try
+        {
+            while (_stepIndex < Steps.Count - 1)
+            {
+                await Task.Delay(DelayMs, token);
+                _stepIndex++;
+
+                await InvokeAsync(StateHasChanged);
+                await ScrollLogAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Пауза — нормальный сценарий.
+        }
+        finally
+        {
+            _isPlaying = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Задержка между шагами: у внешней сортировки шаги крупнее, поэтому чуть медленнее.</summary>
+    private const int DelayMs = 400;
+
+    private void Pause()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+    }
+
+    private void Reset()
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+        _stepIndex = 0;
+        StateHasChanged();
+    }
+
+    private void StepForward()
+    {
+        if (IsFinished) return;
+        _stepIndex++;
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    private void StepBack()
+    {
+        if (_stepIndex == 0) return;
+        _stepIndex--;
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    private void GoToStep(int index)
+    {
+        _cts?.Cancel();
+        _isPlaying = false;
+        _stepIndex = Math.Clamp(index, 0, Math.Max(Steps.Count - 1, 0));
+        StateHasChanged();
+        _ = ScrollLogAsync();
+    }
+
+    private async Task ScrollLogAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("algoLabSortDemo.scrollCurrent", _logContainer);
+        }
+        catch (JSException)
+        {
+            // Прокрутка вспомогательная: если JS недоступен, показ продолжается.
+        }
+        catch (InvalidOperationException)
+        {
+            // Компонент уже отрисован заново.
+        }
+    }
+
+    /// <summary>
+    /// Отдаёт пользователю готовый файл с отсортированными записями.
+    /// </summary>
+    private async Task DownloadResult()
+    {
+        string text = Table.ToFileText(ResultRecords);
+        string fileName = "sorted-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt";
+
+        try
+        {
+            await JS.InvokeVoidAsync("algoLabSortDemo.downloadTextFile", fileName, text);
+        }
+        catch (JSException)
+        {
+            // Скачивание — дополнительная возможность: без него демонстрация работает.
+        }
+    }
+
+    // =========================================
+    // ОФОРМЛЕНИЕ
+    // =========================================
+
+    private static string KindTitle(ExternalStepKind kind) => kind switch
+    {
+        ExternalStepKind.Phase => "Этап работы",
+        ExternalStepKind.CreateRun => "Создан отрезок",
+        ExternalStepKind.Read => "Чтение из файла",
+        ExternalStepKind.Write => "Запись в файл",
+        ExternalStepKind.Compare => "Сравнение ключей",
+        ExternalStepKind.Merge => "Слияние файлов",
+        ExternalStepKind.Done => "Сортировка завершена",
+        _ => "Пояснение"
+    };
+
+    private static string KindShort(ExternalStepKind kind) => kind switch
+    {
+        ExternalStepKind.Phase => "ЭТАП",
+        ExternalStepKind.CreateRun => "ОТРЕЗОК",
+        ExternalStepKind.Read => "ЧТЕНИЕ",
+        ExternalStepKind.Write => "ЗАПИСЬ",
+        ExternalStepKind.Compare => "СРАВН",
+        ExternalStepKind.Merge => "СЛИЯНИЕ",
+        ExternalStepKind.Done => "ФИНАЛ",
+        _ => "ЗАМЕТКА"
+    };
+}

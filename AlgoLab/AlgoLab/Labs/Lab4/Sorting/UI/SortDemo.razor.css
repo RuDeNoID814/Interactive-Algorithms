@@ -1,0 +1,393 @@
+/* =========================================
+   ПОШАГОВАЯ ДЕМОНСТРАЦИЯ СОРТИРОВКИ
+   ========================================= */
+
+.sort-demo {
+    margin-top: 1.5rem;
+}
+
+/* ---------- Настройки ---------- */
+
+.sort-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.sort-control label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.35rem;
+}
+
+.sort-control label strong {
+    color: var(--ink);
+}
+
+.sort-delay-hint {
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    line-height: 1.35;
+}
+
+.sort-control-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+/* ---------- Управление показом ---------- */
+
+.sort-playback {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* ---------- Прогресс и счётчики ---------- */
+
+.sort-progress-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    font-size: 0.92rem;
+}
+
+.sort-progress-text {
+    color: var(--ink-soft);
+}
+
+.sort-counters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sort-counter {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    border: 1px solid transparent;
+}
+
+.sort-counter-compare {
+    background: #eaf1ff;
+    border-color: #c7dbff;
+    color: #1d4ed8;
+}
+
+.sort-counter-swap {
+    background: #fff1e8;
+    border-color: #ffd9c2;
+    color: #c2410c;
+}
+
+.sort-counter-shift {
+    background: #f0ecff;
+    border-color: #ddd4ff;
+    color: #6d28d9;
+}
+
+.sort-progress-bar {
+    height: 8px;
+    margin-top: 0.5rem;
+}
+
+/* ---------- Сцена с массивом ---------- */
+
+.sort-stage {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.25rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.sort-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    height: 260px;
+}
+
+.sort-bar-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 0;
+    max-width: 64px;
+    height: 100%;
+}
+
+.sort-bar {
+    width: 100%;
+    min-height: 4px;
+    border-radius: 5px 5px 0 0;
+    background: var(--accent);
+    transition: height 0.18s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.sort-bar-value {
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+}
+
+/* Состояния столбцов */
+
+.sort-bar-dim {
+    opacity: 0.35;
+}
+
+.sort-bar-sorted {
+    background: #16a34a;
+    opacity: 1;
+}
+
+.sort-bar-compare {
+    background: #2563eb;
+    box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.sort-bar-swap {
+    background: #ea580c;
+    box-shadow: 0 0 0 2px #fed7aa;
+}
+
+.sort-bar-shift {
+    background: #7c3aed;
+    box-shadow: 0 0 0 2px #ddd6fe;
+}
+
+.sort-bar-pivot {
+    background: #db2777;
+    box-shadow: 0 0 0 2px #fbcfe8;
+}
+
+.sort-bar-held {
+    background: #ca8a04;
+    box-shadow: 0 0 0 2px #fde68a;
+}
+
+/* ---------- Легенда ---------- */
+
+.sort-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem 1.1rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+
+.sort-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.sort-chip {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.sort-chip-compare {
+    background: #2563eb;
+}
+
+.sort-chip-swap {
+    background: #ea580c;
+}
+
+.sort-chip-pivot {
+    background: #db2777;
+}
+
+.sort-chip-sorted {
+    background: #16a34a;
+}
+
+.sort-chip-range {
+    background: var(--accent);
+    opacity: 0.35;
+}
+
+/* ---------- Пояснение текущего шага ---------- */
+
+.sort-explanation {
+    margin-top: 1rem;
+    padding: 0.85rem 1.1rem;
+    border-left: 4px solid var(--accent);
+    background: var(--surface-hover);
+    border-radius: 0 10px 10px 0;
+}
+
+.sort-explanation-compare {
+    border-left-color: #2563eb;
+}
+
+.sort-explanation-swap {
+    border-left-color: #ea580c;
+}
+
+.sort-explanation-shift {
+    border-left-color: #7c3aed;
+}
+
+.sort-explanation-hold,
+.sort-explanation-pivot {
+    border-left-color: #db2777;
+}
+
+.sort-explanation-sorted,
+.sort-explanation-done {
+    border-left-color: #16a34a;
+}
+
+.sort-explanation-kind {
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-faint);
+    margin-bottom: 0.25rem;
+}
+
+.sort-explanation-text {
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+/* ---------- Лог шагов ---------- */
+
+.sort-log {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.sort-log-row {
+    display: grid;
+    grid-template-columns: 52px 74px 1fr auto;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.sort-log-row:last-child {
+    border-bottom: none;
+}
+
+.sort-log-row:hover {
+    background: var(--surface-hover);
+}
+
+.sort-log-row-current {
+    background: #eef4ff;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.sort-log-num {
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+}
+
+.sort-log-kind {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sort-log-kind-compare {
+    background: #eaf1ff;
+    color: #1d4ed8;
+}
+
+.sort-log-kind-swap {
+    background: #fff1e8;
+    color: #c2410c;
+}
+
+.sort-log-kind-shift {
+    background: #f0ecff;
+    color: #6d28d9;
+}
+
+.sort-log-kind-hold,
+.sort-log-kind-pivot {
+    background: #fdf2f8;
+    color: #be185d;
+}
+
+.sort-log-kind-sorted,
+.sort-log-kind-done {
+    background: #ecfdf5;
+    color: #15803d;
+}
+
+.sort-log-kind-note {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.sort-log-message {
+    color: var(--ink);
+    line-height: 1.4;
+}
+
+.sort-log-counters {
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ---------- Адаптивность ---------- */
+
+@media (max-width: 640px) {
+    .sort-bars {
+        height: 190px;
+        gap: 2px;
+    }
+
+    .sort-log-row {
+        grid-template-columns: 40px 1fr;
+        row-gap: 0.2rem;
+    }
+
+    .sort-log-counters {
+        grid-column: 2;
+        justify-self: end;
+    }
+
+    .sort-bar-value {
+        font-size: 0.62rem;
+    }
+}

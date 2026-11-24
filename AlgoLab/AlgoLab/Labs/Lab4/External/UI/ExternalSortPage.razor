@@ -1,0 +1,513 @@
+@page "/lab4/external"
+@using AlgoLab.Labs.Lab4.External
+@using AlgoLab.Labs.Lab4.External.UI
+@using AlgoLab.Models
+
+<div class="algo-page-header">
+    <a href="/lab4" class="back-link">← Лабораторная №4</a>
+    <span class="algo-page-complexity">задание 2</span>
+    <h2>Алгоритмы внешней сортировки</h2>
+    <p class="algo-page-desc">
+        Таблица из файла сортируется методом слияния: программа показывает, как создаются отрезки,
+        как они сливаются и сколько сравнений и перемещений между файлами на это ушло.
+    </p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-7 mb-3">
+        <h4>Зачем нужна внешняя сортировка</h4>
+        <p class="sort-theory-text">
+            Внутренняя сортировка предполагает, что все данные лежат в оперативной памяти. Но файл может
+            быть больше памяти: тогда загрузить его целиком нельзя. Внешняя сортировка решает задачу иначе —
+            файл просматривается последовательно, небольшими порциями, а промежуточные результаты
+            сбрасываются в собственные файлы.
+        </p>
+        <p class="sort-theory-text">
+            Сортировка слиянием подходит для этого лучше других: чтобы слить два упорядоченных файла,
+            достаточно держать в памяти по одной записи из каждого — «головы». Сравниваем головы,
+            меньшую записываем в результат и подтягиваем следующую из того же файла. К уже прочитанной
+            записи возвращаться не нужно, поэтому алгоритм честно работает с файлами на диске.
+        </p>
+
+        <h5 class="mt-4">Три метода из задания</h5>
+        <ol class="sort-walkthrough">
+            <li>
+                <strong>Прямое слияние.</strong> Файл читается подряд и режется на отрезки ровно по размеру
+                памяти. Каждый отрезок сортируется в памяти и записывается в свой файл. Дальше отрезки
+                сливаются попарно, проход за проходом, пока не останется один файл.
+            </li>
+            <li>
+                <strong>Естественное слияние.</strong> Размер отрезка заранее не задаётся: отрезком считается
+                уже упорядоченный участок файла. На почти отсортированных данных таких участков мало,
+                и проходов слияния требуется меньше. На случайных данных участки короткие, и выигрыша нет.
+            </li>
+            <li>
+                <strong>Многопутевое слияние.</strong> За один проход сливается не два, а k файлов сразу.
+                Проходов становится в log<sub>2</sub>(k) раз меньше, но каждый шаг требует держать в памяти
+                k «голов» и искать среди них наименьшую.
+            </li>
+        </ol>
+    </div>
+
+    <div class="col-lg-5 mb-3">
+        <div class="card sort-facts-card">
+            <div class="card-body">
+                <h5 class="card-title">Что требуется по заданию</h5>
+                <ul class="mb-3 sort-walkthrough">
+                    <li>Таблица из нескольких полей хранится в файле.</li>
+                    <li>Метод внешней сортировки выбирает пользователь.</li>
+                    <li>Ключевое поле, по которому идёт сортировка, тоже выбирает пользователь.</li>
+                    <li>Количество полей в таблице произвольное.</li>
+                    <li>Результат записывается в результирующий файл.</li>
+                </ul>
+
+                <table class="table table-sm sort-facts-table mb-0">
+                    <tbody>
+                        <tr>
+                            <th>Сложность</th>
+                            <td>O(n log n) сравнений, но с учётом чтения и записи файлов — O(n log n) обращений к диску</td>
+                        </tr>
+                        <tr>
+                            <th>Память</th>
+                            <td>O(m) — только буфер на m записей, файл целиком в память не читается</td>
+                        </tr>
+                        <tr>
+                            <th>Устойчивость</th>
+                            <td>Устойчива: при равных ключах раньше записывается запись из левого файла</td>
+                        </tr>
+                        <tr>
+                            <th>Где применяется</th>
+                            <td>Сортировка больших таблиц, внешние утилиты <code>sort</code>, базы данных</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<!-- ========================================= -->
+<!-- ИСХОДНАЯ ТАБЛИЦА                          -->
+<!-- ========================================= -->
+
+<h3>1. Таблица в файле</h3>
+<p class="text-muted">
+    Выберите готовый файл из задания, загрузите свой <code>.txt</code> или вставьте таблицу в поле ниже.
+    Первая строка — заголовок, дальше по строке на запись. Разделителем может быть табуляция,
+    точка с запятой, запятая или пробелы: программа определяет его сама.
+</p>
+
+<div class="row align-items-end">
+    <div class="col-md-5 mb-3">
+        <label>Готовый файл</label>
+        <select class="form-select" value="@SampleIndex" @onchange="OnSampleChanged">
+            @for (int i = 0; i < ExternalTableSamples.All.Count; i++)
+            {
+                <option value="@i">@ExternalTableSamples.All[i].FileName — @ExternalTableSamples.All[i].Name</option>
+            }
+        </select>
+        <div class="ext-sort-hint">@CurrentSample.Description</div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <label>Свой файл</label>
+        <InputFile OnChange="OnFileSelected" class="form-control" accept=".txt,.csv,.tsv,.dat" />
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <button class="btn btn-primary w-100" @onclick="ApplyText">Прочитать таблицу</button>
+    </div>
+</div>
+
+<textarea class="form-control ext-sort-source" rows="8" @bind="SourceText" @bind:event="oninput"></textarea>
+
+@if (!string.IsNullOrEmpty(ParseError))
+{
+    <div class="alert alert-danger mt-3">@ParseError</div>
+}
+
+@if (Table is null)
+{
+    <div class="alert alert-warning mt-3">
+        Таблица ещё не прочитана. Выберите готовый файл и нажмите «Прочитать таблицу».
+    </div>
+}
+else
+{
+    <div class="alert alert-light border mt-3">
+        Прочитано записей: <strong>@Table.Records.Count</strong>,
+        полей: <strong>@Table.Headers.Length</strong>,
+        разделитель — <strong>@Table.Separator</strong>.
+        Поля, найденные в заголовке:
+        @for (int i = 0; i < Table.Columns.Count; i++)
+        {
+            var column = Table.Columns[i];
+            <span class="ext-sort-field">
+                @column.Name <em>(@column.KindLabel)</em>
+            </span>
+        }
+    </div>
+}
+
+<!-- ========================================= -->
+<!-- ПОШАГОВАЯ ДЕМОНСТРАЦИЯ                    -->
+<!-- ========================================= -->
+
+@if (Table is not null)
+{
+    <hr />
+
+    <h3>2. Пошаговая демонстрация</h3>
+    <p class="text-muted">
+        Выберите метод, ключевое поле и размер буфера в памяти, затем нажмите «Показать сортировку».
+        На схеме видно, что лежит в каждом файле: ключ записи подсвечивается, уже прочитанные
+        из файла записи зачёркиваются. Любую строку лога можно выбрать, чтобы вернуться к нужному шагу.
+    </p>
+
+    <ExternalSortDemo @key="DemoKey" Table="Table" />
+}
+
+<!-- ========================================= -->
+<!-- ЗАМЕРЫ                                    -->
+<!-- ========================================= -->
+
+@if (Table is not null)
+{
+    <hr />
+
+    <h3>3. Замеры на файлах разного размера</h3>
+    <p class="text-muted">
+        Одна и та же таблица повторяется до нужного числа записей, перемешивается и сортируется
+        каждым методом заново. В таблицу попадают сравнения ключей, число обращений к файлам
+        и время. Каждый результат проверяется по эталону: если порядок нарушен, строка помечается.
+    </p>
+
+    <div class="row align-items-end">
+        <div class="col-md-4 mb-3">
+            <label>Ключевое поле</label>
+            <select class="form-select" @bind="BenchColumnIndex" disabled="@Running">
+                @for (int i = 0; i < Table.Columns.Count; i++)
+                {
+                    <option value="@i">@Table.Columns[i].Name (@Table.Columns[i].KindLabel)</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label>Записей в памяти (буфер)</label>
+            <input type="number" min="2" max="100" class="form-control" @bind="BenchMemory" disabled="@Running" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <button class="btn btn-success w-100" @onclick="RunBenchmark" disabled="@Running">
+                @(Running ? "Идёт замер…" : "Запустить замеры")
+            </button>
+        </div>
+    </div>
+
+    <p class="text-muted small">
+        Размеры файла: @string.Join(", ", ExternalSortBenchmark.Sizes) записей.
+        Методов: @ExternalSortBenchmark.Methods.Length.
+    </p>
+
+    @if (Running)
+    {
+        <div class="progress mt-3" style="height:22px">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 style="width:@(Progress.ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%">
+                @Progress.ToString("F0")%
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(BenchError))
+    {
+        <div class="alert alert-danger mt-3">@BenchError</div>
+    }
+
+    @if (Rows.Count > 0)
+    {
+        <h6 class="mt-4">Таблица результатов (для отчёта)</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle ext-sort-benchtable">
+                <thead>
+                    <tr>
+                        <th class="text-end">Записей</th>
+                        <th>Метод</th>
+                        <th class="text-end">Отрезков</th>
+                        <th class="text-end">Проходов</th>
+                        <th class="text-end">Сравнений</th>
+                        <th class="text-end">Чтений</th>
+                        <th class="text-end">Записей</th>
+                        <th class="text-end">Время, мс</th>
+                        <th>Проверка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        <tr>
+                            <td class="text-end">@row.Records.ToString("N0")</td>
+                            <td>@row.Method</td>
+                            <td class="text-end">@row.Runs.ToString("N0")</td>
+                            <td class="text-end">@row.Passes</td>
+                            <td class="text-end">@row.Comparisons.ToString("N0")</td>
+                            <td class="text-end">@row.Reads.ToString("N0")</td>
+                            <td class="text-end">@row.Writes.ToString("N0")</td>
+                            <td class="text-end">@row.TimeMs.ToString("F3")</td>
+                            <td>
+                                @if (row.Verified)
+                                {
+                                    <span class="ext-sort-ok">порядок верный</span>
+                                }
+                                else
+                                {
+                                    <span class="ext-sort-bad">ошибка</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-6 mb-4">
+                <ComplexityChart Experimental="@DirectPoints"
+                                 Approximation="@NaturalPoints"
+                                 ExperimentName="Прямое слияние"
+                                 ApproximationName="Естественное слияние"
+                                 Title="Внешняя сортировка: время на файлах разного размера"
+                                 XAxisTitle="Число записей в файле"
+                                 YAxisTitle="Время сортировки, мс"
+                                 Height="440" />
+            </div>
+            <div class="col-lg-6 mb-4">
+                <ComplexityChart Experimental="@DirectPoints"
+                                 Approximation="@MultiwayPoints"
+                                 ExperimentName="Прямое слияние"
+                                 ApproximationName="Многопутевое слияние"
+                                 Title="Прямое и многопутевое слияние"
+                                 XAxisTitle="Число записей в файле"
+                                 YAxisTitle="Время сортировки, мс"
+                                 Height="440" />
+            </div>
+        </div>
+
+        <div class="alert alert-secondary">
+            <strong>Как читать таблицу.</strong>
+            Первое число — сколько раз пришлось прочитать файл целиком, оно растёт как log(n) по числу
+            проходов. Число отрезков у прямого слияния равно n / m: чем больше буфер в памяти, тем
+            меньше файлов и проходов. У естественного слияния на почти отсортированном файле отрезков
+            заметно меньше — в этом и состоит его преимущество.
+        </div>
+    }
+}
+
+@code {
+    private const string DefaultSampleKey = "countries.txt";
+
+    private int _sampleIndex;
+    private string _sourceText = "";
+    private string _parseError = "";
+    private ExternalSortTable? _table;
+
+    private bool _running;
+    private double _progress;
+    private string _benchError = "";
+    private int _benchColumnIndex;
+    private int _benchMemory = 4;
+
+    private List<ExternalBenchRow> _rows = new();
+    private List<BenchmarkPoint> _directPoints = new();
+    private List<BenchmarkPoint> _naturalPoints = new();
+    private List<BenchmarkPoint> _multiwayPoints = new();
+
+    /// <summary>Какой набор выбран в списке.</summary>
+    private int SampleIndex => _sampleIndex;
+
+    private ExternalTableSamples.Sample CurrentSample =>
+        ExternalTableSamples.All[Math.Clamp(_sampleIndex, 0, ExternalTableSamples.All.Count - 1)];
+
+    /// <summary>Текст таблицы в поле ввода.</summary>
+    private string SourceText
+    {
+        get => _sourceText;
+        set => _sourceText = value;
+    }
+
+    /// <summary>Прочитанная таблица или <c>null</c>, если файл ещё не разобран.</summary>
+    private ExternalSortTable? Table => _table;
+
+    private string ParseError => _parseError;
+
+    private bool Running => _running;
+    private double Progress => _progress;
+    private string BenchError => _benchError;
+
+    private int BenchColumnIndex
+    {
+        get => _benchColumnIndex;
+        set => _benchColumnIndex = value;
+    }
+
+    private int BenchMemory
+    {
+        get => _benchMemory;
+        set => _benchMemory = Math.Clamp(value, 2, 100);
+    }
+
+    private List<ExternalBenchRow> Rows => _rows;
+
+    /// <summary>
+    /// Ключ компонента демонстрации: меняется вместе с таблицей, поэтому при загрузке
+    /// нового файла прогон пересобирается, а настройки показа сбрасываются.
+    /// </summary>
+    private string DemoKey => Table is null ? "нет-таблицы" : Table.Records.Count + "-" + Table.Headers.Length + "-" + _loadCounter;
+
+    private int _loadCounter;
+
+    private List<BenchmarkPoint> DirectPoints => _directPoints;
+    private List<BenchmarkPoint> NaturalPoints => _naturalPoints;
+    private List<BenchmarkPoint> MultiwayPoints => _multiwayPoints;
+
+    protected override void OnInitialized()
+    {
+        _sampleIndex = IndexOfSample(DefaultSampleKey);
+        LoadSample();
+    }
+
+    private static int IndexOfSample(string fileName)
+    {
+        for (int i = 0; i < ExternalTableSamples.All.Count; i++)
+        {
+            if (ExternalTableSamples.All[i].FileName == fileName) return i;
+        }
+
+        return 0;
+    }
+
+    private void LoadSample()
+    {
+        _sourceText = CurrentSample.Text;
+        ApplyText();
+    }
+
+    private void OnSampleChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value)) _sampleIndex = value;
+        LoadSample();
+        StateHasChanged();
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var stream = e.File.OpenReadStream(5 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            _sourceText = await reader.ReadToEndAsync();
+            ApplyText();
+        }
+        catch (Exception ex)
+        {
+            _parseError = "Не удалось прочитать файл: " + ex.Message;
+        }
+    }
+
+    /// <summary>Разбирает текст файла в таблицу и сообщает об ошибке, если формат не подошёл.</summary>
+    private void ApplyText()
+    {
+        _parseError = "";
+
+        try
+        {
+            _table = ExternalTableParser.Parse(_sourceText);
+            _benchColumnIndex = 0;
+
+            // По умолчанию ключом становится первое числовое поле: в примерах из задания
+            // это и есть тот атрибут, по которому просят упорядочить записи.
+            for (int i = 0; i < _table.Columns.Count; i++)
+            {
+                if (_table.Columns[i].Kind == ExternalKeyKind.Number)
+                {
+                    _benchColumnIndex = i;
+                    break;
+                }
+            }
+
+            _loadCounter++;
+        }
+        catch (FormatException ex)
+        {
+            _table = null;
+            _parseError = ex.Message;
+        }
+    }
+
+    // =========================================
+    // ЗАМЕРЫ
+    // =========================================
+
+    private async Task RunBenchmark()
+    {
+        if (_running || Table is null) return;
+
+        _benchError = "";
+        _running = true;
+        _rows = new List<ExternalBenchRow>();
+        _directPoints = new List<BenchmarkPoint>();
+        _naturalPoints = new List<BenchmarkPoint>();
+        _multiwayPoints = new List<BenchmarkPoint>();
+        _progress = 0;
+
+        try
+        {
+            var sample = Table;
+            var column = sample.Columns[Math.Clamp(_benchColumnIndex, 0, sample.Columns.Count - 1)];
+
+            int total = ExternalSortBenchmark.Sizes.Length * ExternalSortBenchmark.Methods.Length;
+            int done = 0;
+
+            foreach (var method in ExternalSortBenchmark.Methods)
+            {
+                foreach (int size in ExternalSortBenchmark.Sizes)
+                {
+                    // Уступаем поток интерфейсу, иначе полоса прогресса не сдвинется.
+                    await Task.Yield();
+
+                    var row = ExternalSortBenchmark.Measure(sample, column, method, size, _benchMemory);
+                    _rows.Add(row);
+
+                    var point = new BenchmarkPoint { N = row.Records, TimeMs = row.TimeMs };
+                    switch (method)
+                    {
+                        case ExternalSortMethod.Direct:
+                            _directPoints.Add(point);
+                            break;
+                        case ExternalSortMethod.Natural:
+                            _naturalPoints.Add(point);
+                            break;
+                        default:
+                            _multiwayPoints.Add(point);
+                            break;
+                    }
+
+                    done++;
+                    _progress = done * 100.0 / total;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _benchError = ex.Message;
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+}

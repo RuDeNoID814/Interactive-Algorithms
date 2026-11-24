@@ -1,0 +1,101 @@
+@page "/lab4"
+@using AlgoLab.Labs.Lab4.Sorting
+
+<div class="catalog">
+
+    <div class="catalog-header">
+        <div class="catalog-topic">
+            <div class="catalog-title-row">
+                <h2>Лабораторная работа №4</h2>
+                <span class="catalog-count-badge">@SortCatalog.All.Count демонстрации</span>
+            </div>
+            <p class="catalog-subtitle">Внутренние сортировки: пошаговая демонстрация, лог сравнений и перемещений</p>
+        </div>
+    </div>
+
+    <div class="alert alert-light border">
+        <strong>Задание 1.</strong> Два квадратичных и два усовершенствованных алгоритма внутренней
+        сортировки. Для каждого — пошаговый вывод с настраиваемой задержкой, подсветка сравниваемых
+        и переставляемых элементов, понятные пояснения и полный лог сравнений и перемещений.
+    </div>
+
+    @foreach (var group in SortCatalog.All.GroupBy(item => item.Category))
+    {
+        <div class="algo-category">
+            <div class="algo-category-header">
+                <h4>@group.Key</h4>
+                <span class="algo-category-count">@group.Count() алгоритма</span>
+            </div>
+
+            <div class="algo-grid">
+                @foreach (var demo in group)
+                {
+                    <a href="@($"/lab4/sort/{demo.Slug}")" class="algo-card">
+
+                        <div class="algo-card-top">
+                            <span class="algo-card-complexity">@demo.Complexity</span>
+                            <span class="sort-stability-badge @(demo.IsStable ? "sort-stability-yes" : "sort-stability-no")">
+                                @(demo.IsStable ? "устойчивая" : "неустойчивая")
+                            </span>
+                        </div>
+
+                        <h5>@demo.Name</h5>
+                        <p>@demo.Description</p>
+
+                        <div class="algo-card-foot">
+                            <span class="algo-card-formula">@demo.Formula</span>
+                            <span class="algo-card-arrow">&#8599;</span>
+                        </div>
+
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ========================================= -->
+    <!-- СВОДНАЯ ТАБЛИЦА                           -->
+    <!-- ========================================= -->
+
+    <h4 class="mt-5">Сводная таблица</h4>
+    <p class="text-muted small">
+        Данные для отчёта: сложность, память и устойчивость всех четырёх алгоритмов.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-hover sort-summary-table align-middle">
+            <thead>
+                <tr>
+                    <th>Алгоритм</th>
+                    <th>Группа</th>
+                    <th>Лучший</th>
+                    <th>Средний</th>
+                    <th>Худший</th>
+                    <th>Память</th>
+                    <th>Устойчивость</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var demo in SortCatalog.All)
+                {
+                    <tr>
+                        <td>
+                            <a href="@($"/lab4/sort/{demo.Slug}")">@demo.Name</a>
+                        </td>
+                        <td class="text-muted small">@demo.Category</td>
+                        <td>@demo.BestCase</td>
+                        <td>@demo.AverageCase</td>
+                        <td>@demo.WorstCase</td>
+                        <td>@demo.Memory</td>
+                        <td>
+                            <span class="sort-badge @(demo.IsStable ? "sort-badge-yes" : "sort-badge-no")">
+                                @demo.Stability
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>

@@ -1,0 +1,660 @@
+@page "/lab4/words"
+@using System.Globalization
+@using AlgoLab.Labs.Lab4.Words
+
+<div class="algo-page-header">
+    <a href="/lab4" class="back-link">← Сортировки</a>
+    <span class="algo-page-complexity">O(n log n) и O(n·k)</span>
+    <h2>Задание 3. Сортировка слов текста и подсчёт частот</h2>
+    <p class="algo-page-desc">
+        Текст разбирается на отдельные слова, слова сортируются в лексикографическом порядке
+        тремя алгоритмами, а затем по отсортированному массиву одним проходом считается,
+        сколько раз встретилось каждое слово.
+    </p>
+</div>
+
+<!-- ========================================= -->
+<!-- КАК ЭТО РАБОТАЕТ                          -->
+<!-- ========================================= -->
+
+<div class="row mb-4">
+    <div class="col-lg-7 mb-3">
+        <h4>Как это работает</h4>
+        <p class="text-body">
+            Сначала текст превращается в слова. Мы приводим все буквы к нижнему регистру
+            и берём только последовательности латинских букв: запятые, точки и цифры при этом
+            просто исчезают, а «Word,» и «word.» становятся одним и тем же словом <code>word</code>.
+        </p>
+        <p class="text-body">
+            Потом слова встают по алфавиту. Это похоже на расстановку книг на полке: две книги
+            с одинаковым названием будут стоять рядом. Именно поэтому после сортировки достаточно
+            одного прохода по массиву, чтобы посчитать, сколько раз встречается каждое слово:
+            сравниваем соседей, и пока они одинаковые — увеличиваем счётчик.
+        </p>
+        <p class="text-body mb-0">
+            Быстрая сортировка Хоара сравнивает слова целиком, «как в словаре». Поразрядные
+            алгоритмы (LSD и ABC) вообще не сравнивают слова: они смотрят на буквы — сначала
+            на первую, потом на вторую и так далее — и раскладывают слова по корзинам,
+            как карточки по ящикам с буквами.
+        </p>
+    </div>
+
+    <div class="col-lg-5 mb-3">
+        <div class="card words-facts-card">
+            <div class="card-body">
+                <h5 class="card-title">Что сравниваем</h5>
+                <table class="table table-sm words-facts-table mb-0">
+                    <tbody>
+                        <tr>
+                            <th>QuickSort</th>
+                            <td>
+                                Базовый усовершенствованный алгоритм. Сравнивает слова целиком,
+                                в среднем <strong>O(n log n)</strong> сравнений строк.
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>LSD-сортировка</th>
+                            <td>
+                                Поразрядная сортировка от последней буквы к первой.
+                                Сравнений нет: только просмотры символов и раскладка по корзинам.
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>ABC-сортировка</th>
+                            <td>
+                                Поразрядная сортировка от первой буквы (MSD, «американский флаг»).
+                                Рекурсивно делит слова по корзинам букв.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-3 mb-0">
+            <strong>Устойчивость LSD-сортировки</strong> важна: чтобы старшая буква «перевесила»
+            младшие, каждый проход обязан сохранять порядок, полученный на предыдущем проходе.
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<!-- ========================================= -->
+<!-- 1. ВВОД ТЕКСТА                            -->
+<!-- ========================================= -->
+
+<h4>1. Текст для обработки</h4>
+<p class="text-muted">
+    Вставьте свой английский текст, загрузите файл <code>.txt</code> или сгенерируйте текст
+    нужной длины. Генерация детерминированная: при одном и том же числе слов текст всегда
+    получается одинаковым, поэтому замеры времени можно повторять.
+</p>
+
+<div class="row g-3 mb-2">
+    <div class="col-md-8">
+        <label class="form-label">Текст</label>
+        <textarea class="form-control words-textarea" rows="7" @bind="InputText" @bind:event="oninput"
+                  placeholder="Paste an English text here..."></textarea>
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Загрузить файл .txt</label>
+        <InputFile OnChange="OnFileSelected" class="form-control mb-3" accept=".txt" />
+
+        <label class="form-label">Число слов для генерации</label>
+        <input type="number" min="10" max="200000" step="10" class="form-control mb-3" @bind="GenerateWords" />
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-outline-secondary" @onclick="LoadSample">Пример текста</button>
+            <button class="btn btn-outline-primary" @onclick="GenerateText">Сгенерировать текст</button>
+            <button class="btn btn-primary" @onclick="Analyze">Разобрать и отсортировать</button>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(InputError))
+{
+    <div class="alert alert-danger">@InputError</div>
+}
+
+@if (Words.Length > 0)
+{
+    <div class="alert alert-light border">
+        В тексте <strong>@Words.Length.ToString("N0")</strong> слов;
+        различных слов после сортировки — <strong>@QuickReport.DistinctWords.ToString("N0")</strong>.
+        Символов в тексте: <strong>@InputText.Length.ToString("N0")</strong>.
+    </div>
+}
+
+<!-- ========================================= -->
+<!-- 2. СОРТИРОВКА                             -->
+<!-- ========================================= -->
+
+@if (Runs.Count > 0)
+{
+    <hr />
+    <h4>2. Результат сортировки тремя алгоритмами</h4>
+    <p class="text-muted">
+        Все три алгоритма сортируют один и тот же массив слов. Время показано для одного прогона,
+        а корректность проверяется сравнением с эталоном — <code>Array.Sort</code> с ординальным
+        сравнением строк.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped words-table align-middle">
+            <thead>
+                <tr>
+                    <th>Алгоритм</th>
+                    <th class="text-end">Время, мс</th>
+                    <th class="text-end">Сравнений</th>
+                    <th class="text-end">Просмотров символов</th>
+                    <th class="text-end">Пересылок</th>
+                    <th>Проверка с эталоном</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var run in Runs)
+                {
+                    <tr>
+                        <td>@run.Name</td>
+                        <td class="text-end">@run.Milliseconds.ToString("F3", CultureInfo.InvariantCulture)</td>
+                        <td class="text-end">@run.Counters.Comparisons.ToString("N0")</td>
+                        <td class="text-end">@run.Counters.CharacterViews.ToString("N0")</td>
+                        <td class="text-end">@run.Counters.Moves.ToString("N0")</td>
+                        <td>
+                            <span class="words-check @(run.IsCorrect ? "words-check-ok" : "words-check-fail")">
+                                @(run.IsCorrect ? "проверка пройдена" : "расхождение с эталоном")
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <h6>Отсортированные слова (начало массива)</h6>
+            <div class="words-scroll">
+                @SortedPreview
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <h6>Объяснение счётчиков</h6>
+            <ul class="words-notes mb-0">
+                <li>
+                    <strong>Сравнения</strong> растут только у QuickSort: каждая проверка порядка
+                    двух слов — это посимвольное сравнение строк.
+                </li>
+                <li>
+                    <strong>Просмотры символов</strong> есть только у поразрядных алгоритмов: LSD
+                    смотрит все слова по каждому разряду, ABC — только нужный символ на текущей глубине.
+                </li>
+                <li>
+                    <strong>Пересылки</strong> — обмены в QuickSort и перенос слов в корзины
+                    в поразрядных алгоритмах. Поразрядные сортировки выигрывают по сравнениям,
+                    но платят за это дополнительной памятью.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- 3. ЧАСТОТЫ                                -->
+    <!-- ========================================= -->
+
+    <hr />
+    <h4>3. Подсчёт частот по отсортированному массиву</h4>
+    <p class="text-muted">
+        Один проход по отсортированному массиву: одинаковые слова идут подряд, поэтому группы
+        выделяются сравнением соседей. Сравнений при подсчёте: <strong>@QuickReport.Comparisons.ToString("N0")</strong>.
+    </p>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3 col-sm-6">
+            <div class="words-stat">
+                <div class="words-stat-value">@QuickReport.TotalWords.ToString("N0")</div>
+                <div class="words-stat-label">всего слов</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="words-stat">
+                <div class="words-stat-value">@QuickReport.DistinctWords.ToString("N0")</div>
+                <div class="words-stat-label">различных слов</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="words-stat">
+                <div class="words-stat-value">@QuickReport.MostFrequentWord</div>
+                <div class="words-stat-label">самое частое слово</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="words-stat">
+                <div class="words-stat-value">@QuickReport.MostFrequentCount.ToString("N0")</div>
+                <div class="words-stat-label">его количество</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="words-scroll words-scroll-table">
+        <table class="table table-sm table-hover mb-0 words-table">
+            <thead>
+                <tr>
+                    <th style="width:60px">№</th>
+                    <th>Слово</th>
+                    <th class="text-end">Количество</th>
+                    <th class="text-end">Доля</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int number = 0; }
+                @foreach (var item in QuickReport.Items)
+                {
+                    number++;
+                    <tr>
+                        <td class="text-muted">@number</td>
+                        <td>@item.Word</td>
+                        <td class="text-end">@item.Count.ToString("N0")</td>
+                        <td class="text-end">@item.Percent.ToString("F2", CultureInfo.InvariantCulture)%</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- ========================================= -->
+<!-- 4. ЭКСПЕРИМЕНТЫ                           -->
+<!-- ========================================= -->
+
+<hr />
+<h4>4. Эксперименты: время сортировки текстов разной длины</h4>
+<p class="text-muted">
+    Для каждого размера генерируется свой детерминированный текст, подаётся всем трём алгоритмам,
+    и время усредняется по нескольким запускам. В таблицу всегда попадают точки
+    100, 500, 1000, 2000 и 5000 слов из задания.
+</p>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Максимум слов</label>
+        <input type="number" min="100" max="200000" step="100" class="form-control"
+               @bind="MaxWords" disabled="@Running" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Шаг</label>
+        <input type="number" min="0" step="100" class="form-control"
+               @bind="StepWords" disabled="@Running" />
+        <div class="form-text">Шаг 0 — только обязательные точки 100/500/1000/2000/5000.</div>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Запусков на точку</label>
+        <input type="number" min="1" max="20" class="form-control"
+               @bind="RunsPerPoint" disabled="@Running" />
+    </div>
+</div>
+
+@if (MaxWords > 20000)
+{
+    <div class="alert alert-warning">
+        Тексты длиннее 20 000 слов в браузере считаются заметно дольше: Blazor WebAssembly
+        выполняет весь код на одном потоке, поэтому страница может «задуматься» на несколько секунд.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(BenchError))
+{
+    <div class="alert alert-danger">@BenchError</div>
+}
+
+<button class="btn btn-success" @onclick="RunBenchmarkAsync" disabled="@Running">
+    @(Running ? "Выполняется..." : "Запустить замеры")
+</button>
+
+@if (Running)
+{
+    <div class="progress mt-3" style="height:22px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             style="width:@(Progress.ToString("F0", CultureInfo.InvariantCulture))%">
+            @Progress.ToString("F0")%
+        </div>
+    </div>
+}
+
+@if (Rows.Count > 0)
+{
+    <div class="mt-4">
+        <ComplexityChart Experimental="@PrimaryPoints"
+                         Approximation="@SecondaryPoints"
+                         ExperimentName="@AlgorithmNames[SelectedPrimary]"
+                         ApproximationName="@AlgorithmNames[SelectedSecondary]"
+                         Title="@($"Сортировка слов: {AlgorithmNames[SelectedPrimary]} и {AlgorithmNames[SelectedSecondary]}")"
+                         XAxisTitle="Число слов в тексте"
+                         YAxisTitle="Время сортировки, мс"
+                         Height="460" />
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-4">
+                <label class="form-label">Основной алгоритм (Experimental)</label>
+                <select class="form-select" @bind="SelectedPrimary" @bind:after="RebuildChart">
+                    @for (int i = 0; i < AlgorithmNames.Length; i++)
+                    {
+                        <option value="@i">@AlgorithmNames[i]</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Алгоритм для сравнения (Approximation)</label>
+                <select class="form-select" @bind="SelectedSecondary" @bind:after="RebuildChart">
+                    @for (int i = 0; i < AlgorithmNames.Length; i++)
+                    {
+                        <option value="@i">@AlgorithmNames[i]</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <h6 class="mt-4">Таблица результатов (для отчёта)</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped words-table">
+                <thead>
+                    <tr>
+                        <th class="text-end">Слов</th>
+                        <th class="text-end">Различных слов</th>
+                        <th class="text-end">QuickSort, мс</th>
+                        <th class="text-end">LSD, мс</th>
+                        <th class="text-end">ABC, мс</th>
+                        <th class="text-end">QuickSort / LSD</th>
+                        <th class="text-end">QuickSort / ABC</th>
+                        <th>Проверка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        <tr>
+                            <td class="text-end">@row.Words.ToString("N0")</td>
+                            <td class="text-end">@row.DistinctWords.ToString("N0")</td>
+                            <td class="text-end">@row.QuickMs.ToString("F3", CultureInfo.InvariantCulture)</td>
+                            <td class="text-end">@row.RadixMs.ToString("F3", CultureInfo.InvariantCulture)</td>
+                            <td class="text-end">@row.AbcMs.ToString("F3", CultureInfo.InvariantCulture)</td>
+                            <td class="text-end">@FormatRatio(row.QuickToRadix)</td>
+                            <td class="text-end">@FormatRatio(row.QuickToAbc)</td>
+                            <td>
+                                <span class="words-check @(row.AllCorrect ? "words-check-ok" : "words-check-fail")">
+                                    @(row.AllCorrect ? "пройдена" : "ошибка")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-secondary mb-0">
+            Время измеряется через <code>System.Diagnostics.Stopwatch</code> и усредняется по
+            @RunsPerPoint запускам: в браузере отдельный замер легко искажают сборка мусора
+            и переключение вкладок. Обратите внимание, что при росте текста QuickSort растёт
+            быстрее по числу сравнений, а поразрядные алгоритмы зависят ещё и от длины слов:
+            ABC-сортировке часто хватает первых двух-трёх букв, тогда как LSD обязана пройти
+            по всем разрядам до самой длинной буквы.
+        </div>
+    </div>
+}
+
+<hr class="mt-5" />
+
+<h4>Пояснения для любознательных</h4>
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="words-note-card">
+            <h6>Почему достаточно одного прохода</h6>
+            <p class="mb-0">
+                После сортировки все одинаковые слова идут подряд. Значит, достаточно идти по массиву
+                слева направо и смотреть, совпадает ли текущее слово с предыдущим: совпало — плюс один
+                к счётчику, не совпало — начинаем новую строчку таблицы. Никакого словаря
+                с хешированием не нужно.
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="words-note-card">
+            <h6>Как работает LSD-сортировка</h6>
+            <p class="mb-0">
+                Сначала все слова раскладываются по последней букве, потом по предпоследней
+                и так до первой. Коротким словам не хватает букв — считаем, что там стоит
+                «пустышка», младшая любой буквы. Каждая раскладка устойчивая, поэтому порядок,
+                наведённый младшими буквами, не теряется.
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="words-note-card">
+            <h6>Как работает ABC-сортировка</h6>
+            <p class="mb-0">
+                Она смотрит на первую букву слова и раскладывает слова по 27 корзинам: 26 букв
+                и отдельная корзина для слов, которые уже закончились. Затем каждая корзина
+                сортируется так же — по следующей букве. Слова-префиксы («a» и «and») при этом
+                автоматически оказываются раньше длинных.
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Названия алгоритмов для выпадающих списков графика.</summary>
+    private static readonly string[] AlgorithmNames =
+    [
+        WordBenchmark.QuickName,
+        WordBenchmark.RadixName,
+        WordBenchmark.AbcName
+    ];
+
+    /// <summary>Текст, который введён или сгенерирован.</summary>
+    private string InputText { get; set; } = WordTextProvider.SampleText;
+
+    /// <summary>Число слов для генерации текста.</summary>
+    private int GenerateWords { get; set; } = 300;
+
+    /// <summary>Сообщение об ошибке чтения файла.</summary>
+    private string InputError { get; set; } = "";
+
+    /// <summary>Разобранные слова текущего текста.</summary>
+    private string[] Words { get; set; } = Array.Empty<string>();
+
+    /// <summary>Результаты трёх алгоритмов на текущем тексте.</summary>
+    private List<WordSortRun> Runs { get; set; } = new();
+
+    /// <summary>Сколько первых слов отсортированного массива показывать.</summary>
+    private const int PreviewWords = 200;
+
+    /// <summary>Максимум слов для экспериментов.</summary>
+    private int MaxWords { get; set; } = 5000;
+
+    /// <summary>Шаг между точками экспериментов.</summary>
+    private int StepWords { get; set; } = 1000;
+
+    /// <summary>Число запусков алгоритма на каждую точку.</summary>
+    private int RunsPerPoint { get; set; } = 3;
+
+    /// <summary>Идут ли замеры прямо сейчас.</summary>
+    private bool Running { get; set; }
+
+    /// <summary>Процент выполнения замеров.</summary>
+    private double Progress { get; set; }
+
+    /// <summary>Сообщение об ошибке экспериментов.</summary>
+    private string BenchError { get; set; } = "";
+
+    /// <summary>Строки таблицы экспериментов.</summary>
+    private List<WordBenchRow> Rows { get; set; } = new();
+
+    /// <summary>Алгоритм, показанный на графике как эксперимент.</summary>
+    private int SelectedPrimary { get; set; }
+
+    /// <summary>Алгоритм, показанный на графике для сравнения.</summary>
+    private int SelectedSecondary { get; set; } = 1;
+
+    /// <summary>Итог подсчёта частот по результату быстрой сортировки.</summary>
+    private WordFrequencyReport QuickReport { get; set; } = new()
+    {
+        Items = Array.Empty<WordFrequency>()
+    };
+
+    /// <summary>Первые слова отсортированного массива — для наглядной проверки глазами.</summary>
+    private string SortedPreview { get; set; } = "";
+
+    /// <summary>Точки графика для основного алгоритма.</summary>
+    private List<BenchmarkPoint> PrimaryPoints { get; set; } = new();
+
+    /// <summary>Точки графика для алгоритма сравнения.</summary>
+    private List<BenchmarkPoint> SecondaryPoints { get; set; } = new();
+
+    /// <summary>Читает загруженный файл .txt в поле текста.</summary>
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        InputError = "";
+        try
+        {
+            using var stream = e.File.OpenReadStream(10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            InputText = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            InputError = "Не удалось прочитать файл: " + ex.Message;
+        }
+    }
+
+    /// <summary>Подставляет осмысленный английский пример.</summary>
+    private void LoadSample()
+    {
+        InputText = WordTextProvider.SampleText;
+        InputError = "";
+    }
+
+    /// <summary>Создаёт детерминированный текст заданной длины.</summary>
+    private void GenerateText()
+    {
+        InputError = "";
+
+        if (GenerateWords < 1)
+        {
+            InputError = "Число слов должно быть больше нуля.";
+            return;
+        }
+
+        InputText = WordTextProvider.Generate(GenerateWords);
+        Analyze();
+    }
+
+    /// <summary>Разбирает текст на слова и прогоняет все три алгоритма.</summary>
+    private void Analyze()
+    {
+        InputError = "";
+
+        Words = WordTextProvider.SplitWords(InputText);
+
+        if (Words.Length == 0)
+        {
+            Runs = new();
+            QuickReport = new WordFrequencyReport { Items = Array.Empty<WordFrequency>() };
+            SortedPreview = "";
+            InputError = "В тексте не найдено ни одного слова из латинских букв.";
+            return;
+        }
+
+        // Для интерактивной части хватает одного запуска: пользователь ждёт результат.
+        Runs = WordBenchmark.Compare(Words, runs: 1).ToList();
+
+        var quick = Runs[0];
+        QuickReport = quick.Frequencies;
+        SortedPreview = string.Join(" · ", quick.Sorted.Take(PreviewWords))
+                        + (quick.Sorted.Length > PreviewWords
+                            ? $" … (показаны первые {PreviewWords} слов из {quick.Sorted.Length:N0})"
+                            : "");
+    }
+
+    /// <summary>Выполняет замеры по всем размерам текста, давая интерфейсу обновиться.</summary>
+    private async Task RunBenchmarkAsync()
+    {
+        if (Running) return;
+
+        BenchError = "";
+
+        if (MaxWords < 1 || RunsPerPoint < 1)
+        {
+            BenchError = "Максимум слов и число запусков должны быть больше нуля.";
+            return;
+        }
+
+        Running = true;
+        Rows = new();
+        Progress = 0;
+
+        try
+        {
+            var sizes = WordBenchmark.BuildSizes(MaxWords, StepWords);
+            int done = 0;
+
+            foreach (int size in sizes)
+            {
+                // Отдаём управление браузеру, иначе полоса прогресса «замрёт» до конца замеров.
+                await Task.Yield();
+
+                Rows.Add(WordBenchmark.Measure(size, RunsPerPoint));
+                done++;
+                Progress = 100.0 * done / sizes.Count;
+                StateHasChanged();
+            }
+
+            RebuildChart();
+        }
+        catch (Exception ex)
+        {
+            BenchError = ex.Message;
+        }
+        finally
+        {
+            Running = false;
+        }
+    }
+
+    /// <summary>Перестраивает точки графика из таблицы результатов.</summary>
+    private void RebuildChart()
+    {
+        PrimaryPoints = Rows
+            .Select(row => new BenchmarkPoint { N = row.Words, TimeMs = TimeOf(row, SelectedPrimary) })
+            .ToList();
+
+        SecondaryPoints = Rows
+            .Select(row => new BenchmarkPoint { N = row.Words, TimeMs = TimeOf(row, SelectedSecondary) })
+            .ToList();
+    }
+
+    /// <summary>Время нужного алгоритма из строки таблицы.</summary>
+    private static double TimeOf(WordBenchRow row, int algorithm) => algorithm switch
+    {
+        0 => row.QuickMs,
+        1 => row.RadixMs,
+        _ => row.AbcMs
+    };
+
+    /// <summary>Форматирует отношение времён; прочерк, если делить не на что.</summary>
+    private static string FormatRatio(double ratio) =>
+        ratio > 0 ? ratio.ToString("F2", CultureInfo.InvariantCulture) : "—";
+
+    /// <summary>Пересобирает график при смене выбранных алгоритмов.</summary>
+    protected override void OnParametersSet()
+    {
+        if (Rows.Count > 0) RebuildChart();
+    }
+
+    /// <summary>
+    /// Сразу разбирает пример текста: страница открывается с готовым результатом,
+    /// иначе пустые разделы выглядели бы как ошибка загрузки.
+    /// </summary>
+    protected override void OnInitialized() => Analyze();
+}
